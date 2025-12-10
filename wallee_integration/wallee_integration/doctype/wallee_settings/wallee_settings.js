@@ -170,7 +170,7 @@ function show_setup_wizard(frm, step) {
                                     </li>
                                     <li>
                                         <strong>${__('Click "Create Application User"')}</strong><br>
-                                        ${__('Give it a name like "ERPNext Integration"')}
+                                        ${__('Give it a name like "Neoffice Integration"')}
                                     </li>
                                     <li>
                                         <strong>${__('Copy the credentials:')}</strong><br>

@@ -75,38 +75,33 @@ def reset_client():
 @frappe.whitelist()
 def test_connection():
 	"""
-	Test connection to Wallee API
+	Test connection to Wallee API by searching for transactions (empty query)
 
 	Returns:
-		dict: {success: bool, space_name: str, space_info: dict, error: str}
+		dict: {success: bool, space_id: int, error: str}
 	"""
 	try:
-		from wallee.service.account_service import AccountService
+		from wallee.service.transaction_service import TransactionService
+		from wallee.models import EntityQuery
 
 		config = get_wallee_client()
 		space_id = get_space_id()
 
-		# Try to read the space to verify connection
-		service = AccountService(config)
-		space = service.read(space_id)
+		# Test connection by doing a simple transaction search (limit 1)
+		service = TransactionService(config)
+		query = EntityQuery(number_of_entities=1)
 
-		space_info = {}
-		if space:
-			space_info = {
-				"id": space.id,
-				"name": getattr(space, "name", None),
-				"state": getattr(space, "state", {}).value if hasattr(getattr(space, "state", None), "value") else str(getattr(space, "state", "Unknown"))
-			}
+		# This will throw an exception if credentials are invalid
+		service.search(space_id, query)
 
-		log_api_call("GET", f"account/{space_id}", response_data=space_info)
+		log_api_call("POST", "transaction/search", {"test": True}, {"success": True})
 
 		return {
 			"success": True,
-			"space_name": space_info.get("name"),
-			"space_info": space_info
+			"space_id": space_id
 		}
 	except Exception as e:
-		log_api_call("GET", "account/test", error=e)
+		log_api_call("POST", "transaction/search", {"test": True}, error=e)
 		return {
 			"success": False,
 			"error": str(e)
