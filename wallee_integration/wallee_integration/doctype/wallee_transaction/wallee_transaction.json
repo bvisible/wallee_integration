@@ -1,0 +1,367 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "WALL-.YYYY.-.#####",
+ "creation": "2024-12-10 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "transaction_id",
+  "status",
+  "transaction_type",
+  "column_break_1",
+  "amount",
+  "currency",
+  "section_reference",
+  "reference_doctype",
+  "reference_name",
+  "column_break_ref",
+  "pos_invoice",
+  "sales_invoice",
+  "sales_order",
+  "section_payment",
+  "payment_method",
+  "payment_connector",
+  "column_break_payment",
+  "card_brand",
+  "card_last_four",
+  "section_terminal",
+  "terminal",
+  "terminal_id",
+  "column_break_terminal",
+  "is_terminal_transaction",
+  "section_customer",
+  "customer",
+  "customer_name",
+  "column_break_customer",
+  "email",
+  "section_details",
+  "authorized_amount",
+  "captured_amount",
+  "column_break_details",
+  "refunded_amount",
+  "failure_reason",
+  "section_timestamps",
+  "authorized_on",
+  "completed_on",
+  "column_break_ts",
+  "voided_on",
+  "refunded_on",
+  "section_meta",
+  "merchant_reference",
+  "external_id",
+  "column_break_meta",
+  "archived",
+  "wallee_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "label": "Wallee Transaction ID",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nProcessing\nAuthorized\nCompleted\nFailed\nVoided\nRefunded\nPartially Refunded",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "default": "Online",
+   "fieldname": "transaction_type",
+   "fieldtype": "Select",
+   "label": "Transaction Type",
+   "options": "Online\nTerminal\nPayment Link",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "options": "currency",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "section_reference",
+   "fieldtype": "Section Break",
+   "label": "Reference"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Name",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "column_break_ref",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "pos_invoice",
+   "fieldtype": "Link",
+   "label": "POS Invoice",
+   "options": "POS Invoice"
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "section_payment",
+   "fieldtype": "Section Break",
+   "label": "Payment Details"
+  },
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Data",
+   "label": "Payment Method"
+  },
+  {
+   "fieldname": "payment_connector",
+   "fieldtype": "Data",
+   "label": "Payment Connector"
+  },
+  {
+   "fieldname": "column_break_payment",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "card_brand",
+   "fieldtype": "Data",
+   "label": "Card Brand"
+  },
+  {
+   "fieldname": "card_last_four",
+   "fieldtype": "Data",
+   "label": "Card Last Four"
+  },
+  {
+   "fieldname": "section_terminal",
+   "fieldtype": "Section Break",
+   "label": "Terminal Info",
+   "depends_on": "eval:doc.is_terminal_transaction"
+  },
+  {
+   "fieldname": "terminal",
+   "fieldtype": "Link",
+   "label": "Terminal",
+   "options": "Wallee Payment Terminal"
+  },
+  {
+   "fieldname": "terminal_id",
+   "fieldtype": "Int",
+   "label": "Terminal ID"
+  },
+  {
+   "fieldname": "column_break_terminal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_terminal_transaction",
+   "fieldtype": "Check",
+   "label": "Is Terminal Transaction"
+  },
+  {
+   "fieldname": "section_customer",
+   "fieldtype": "Section Break",
+   "label": "Customer"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name"
+  },
+  {
+   "fieldname": "column_break_customer",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "section_details",
+   "fieldtype": "Section Break",
+   "label": "Amount Details"
+  },
+  {
+   "fieldname": "authorized_amount",
+   "fieldtype": "Currency",
+   "label": "Authorized Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "captured_amount",
+   "fieldtype": "Currency",
+   "label": "Captured Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_details",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "refunded_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "failure_reason",
+   "fieldtype": "Small Text",
+   "label": "Failure Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_timestamps",
+   "fieldtype": "Section Break",
+   "label": "Timestamps",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "authorized_on",
+   "fieldtype": "Datetime",
+   "label": "Authorized On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_on",
+   "fieldtype": "Datetime",
+   "label": "Completed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "voided_on",
+   "fieldtype": "Datetime",
+   "label": "Voided On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refunded_on",
+   "fieldtype": "Datetime",
+   "label": "Refunded On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_meta",
+   "fieldtype": "Section Break",
+   "label": "Metadata",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "merchant_reference",
+   "fieldtype": "Data",
+   "label": "Merchant Reference"
+  },
+  {
+   "fieldname": "external_id",
+   "fieldtype": "Data",
+   "label": "External ID"
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "archived",
+   "fieldtype": "Check",
+   "label": "Archived"
+  },
+  {
+   "fieldname": "wallee_data",
+   "fieldtype": "JSON",
+   "label": "Wallee Data",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-12-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wallee Integration",
+ "name": "Wallee Transaction",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Accounts User"
+  },
+  {
+   "read": 1,
+   "role": "Sales User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

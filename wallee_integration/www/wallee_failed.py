@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+import frappe
+
+no_cache = 1
+
+
+def get_context(context):
+	transaction_id = frappe.form_dict.get("transaction_id")
+
+	context.transaction = None
+
+	if transaction_id:
+		transaction_name = frappe.db.get_value(
+			"Wallee Transaction",
+			{"transaction_id": str(transaction_id)},
+			"name"
+		)
+
+		if transaction_name:
+			context.transaction = frappe.get_doc("Wallee Transaction", transaction_name)
+			context.transaction.sync_status()
+			context.transaction.reload()
+
+	return context

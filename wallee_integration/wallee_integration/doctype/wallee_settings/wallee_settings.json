@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2024-12-10 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "enabled",
+  "section_credentials",
+  "user_id",
+  "authentication_key",
+  "column_break_1",
+  "space_id",
+  "api_host",
+  "section_webshop",
+  "enable_webshop",
+  "success_url",
+  "failed_url",
+  "column_break_webshop",
+  "default_payment_method",
+  "section_pos",
+  "enable_pos_terminal",
+  "default_terminal",
+  "column_break_pos",
+  "auto_capture",
+  "section_advanced",
+  "webhook_secret",
+  "log_api_calls",
+  "column_break_advanced",
+  "test_mode"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "section_credentials",
+   "fieldtype": "Section Break",
+   "label": "API Credentials"
+  },
+  {
+   "fieldname": "user_id",
+   "fieldtype": "Int",
+   "label": "User ID",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "description": "Your Wallee Application User ID"
+  },
+  {
+   "fieldname": "authentication_key",
+   "fieldtype": "Password",
+   "label": "Authentication Key",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "description": "Your Wallee Authentication Key"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "space_id",
+   "fieldtype": "Int",
+   "label": "Space ID",
+   "mandatory_depends_on": "eval:doc.enabled",
+   "description": "Your Wallee Space ID"
+  },
+  {
+   "default": "https://app-wallee.com/api/v2.0",
+   "fieldname": "api_host",
+   "fieldtype": "Data",
+   "label": "API Host",
+   "description": "Wallee API endpoint URL"
+  },
+  {
+   "fieldname": "section_webshop",
+   "fieldtype": "Section Break",
+   "label": "Webshop Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_webshop",
+   "fieldtype": "Check",
+   "label": "Enable Webshop Payments"
+  },
+  {
+   "fieldname": "success_url",
+   "fieldtype": "Data",
+   "label": "Success URL",
+   "description": "Redirect URL after successful payment"
+  },
+  {
+   "fieldname": "failed_url",
+   "fieldtype": "Data",
+   "label": "Failed URL",
+   "description": "Redirect URL after failed payment"
+  },
+  {
+   "fieldname": "column_break_webshop",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_payment_method",
+   "fieldtype": "Data",
+   "label": "Default Payment Method",
+   "description": "Default payment method for webshop"
+  },
+  {
+   "fieldname": "section_pos",
+   "fieldtype": "Section Break",
+   "label": "POS Terminal Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_pos_terminal",
+   "fieldtype": "Check",
+   "label": "Enable POS Terminal"
+  },
+  {
+   "fieldname": "default_terminal",
+   "fieldtype": "Link",
+   "label": "Default Terminal",
+   "options": "Wallee Payment Terminal",
+   "depends_on": "eval:doc.enable_pos_terminal"
+  },
+  {
+   "fieldname": "column_break_pos",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_capture",
+   "fieldtype": "Check",
+   "label": "Auto Capture",
+   "description": "Automatically capture authorized transactions"
+  },
+  {
+   "fieldname": "section_advanced",
+   "fieldtype": "Section Break",
+   "label": "Advanced Settings",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "webhook_secret",
+   "fieldtype": "Password",
+   "label": "Webhook Secret",
+   "description": "Secret key for webhook verification"
+  },
+  {
+   "default": "0",
+   "fieldname": "log_api_calls",
+   "fieldtype": "Check",
+   "label": "Log API Calls",
+   "description": "Enable detailed API logging for debugging"
+  },
+  {
+   "fieldname": "column_break_advanced",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "test_mode",
+   "fieldtype": "Check",
+   "label": "Test Mode",
+   "description": "Use sandbox/test environment"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-12-10 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wallee Integration",
+ "name": "Wallee Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

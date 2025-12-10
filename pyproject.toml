@@ -1,0 +1,16 @@
+[project]
+name = "wallee_integration"
+authors = [
+    { name = "Neoservice", email = "info@neoservice.ai"}
+]
+description = "Wallee Payment Integration for ERPNext/Frappe/Webshop"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.dev-dependencies]
+wallee = ">=6.2.0"
