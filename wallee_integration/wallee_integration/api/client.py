@@ -81,14 +81,13 @@ def test_connection():
 		dict: {success: bool, space_id: int, error: str}
 	"""
 	try:
-		from wallee.service.transaction_service import TransactionService
-		from wallee.models import EntityQuery
+		from wallee import TransactionsService, EntityQuery
 
 		config = get_wallee_client()
 		space_id = get_space_id()
 
 		# Test connection by doing a simple transaction search (limit 1)
-		service = TransactionService(config)
+		service = TransactionsService(config)
 		query = EntityQuery(number_of_entities=1)
 
 		# This will throw an exception if credentials are invalid
