@@ -11,20 +11,26 @@ from wallee_integration.wallee_integration.api.client import (
 )
 
 
-def create_transaction(line_items, currency, **kwargs):
+def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
     """
-    Create a new Wallee transaction
+    Create a new Wallee transaction and return payment URL
 
     Args:
-        line_items: List of line items (name, quantity, unit_price, etc.)
+        amount: Total amount (used if line_items not provided)
+        line_items: List of line items (name, quantity, amount_including_tax, type, sku)
         currency: Currency code (e.g., 'CHF', 'EUR')
-        **kwargs: Additional transaction parameters
+        **kwargs: Additional transaction parameters:
+            - merchant_reference: Reference ID
+            - customer_id: Customer identifier
+            - customer_email: Customer email address
+            - success_url: URL to redirect on success
+            - failed_url: URL to redirect on failure
+            - auto_confirm: Auto confirm transaction (default True)
 
     Returns:
-        Transaction object from Wallee
+        dict: {transaction_id, payment_url, state}
     """
-    from wallee.service.transactions_service import TransactionsService
-    from wallee.models import LineItemCreate, TransactionCreate
+    from wallee import TransactionsService, LineItemCreate, TransactionCreate, LineItemType
 
     config = get_wallee_client()
     space_id = get_space_id()
@@ -32,15 +38,40 @@ def create_transaction(line_items, currency, **kwargs):
 
     # Build line items
     wallee_line_items = []
-    for item in line_items:
+
+    if line_items:
+        for item in line_items:
+            # Map item type
+            item_type = LineItemType.PRODUCT
+            type_str = item.get("type", "PRODUCT").upper()
+            if type_str == "SHIPPING":
+                item_type = LineItemType.SHIPPING
+            elif type_str == "DISCOUNT":
+                item_type = LineItemType.DISCOUNT
+            elif type_str == "FEE":
+                item_type = LineItemType.FEE
+
+            line_item = LineItemCreate(
+                name=item.get("name"),
+                quantity=float(item.get("quantity", 1)),
+                amount_including_tax=float(item.get("amount_including_tax", 0)),
+                unique_id=item.get("unique_id") or item.get("sku") or str(frappe.generate_hash()[:8]),
+                type=item_type,
+                sku=item.get("sku")
+            )
+            wallee_line_items.append(line_item)
+    elif amount:
+        # Create single line item for total amount
         line_item = LineItemCreate(
-            name=item.get("name"),
-            quantity=item.get("quantity", 1),
-            amount_including_tax=item.get("amount"),
-            unique_id=item.get("unique_id", str(frappe.generate_hash()[:8])),
-            type="PRODUCT"
+            name=kwargs.get("merchant_reference") or _("Payment"),
+            quantity=1,
+            amount_including_tax=float(amount),
+            unique_id=str(frappe.generate_hash()[:8]),
+            type=LineItemType.PRODUCT
         )
         wallee_line_items.append(line_item)
+    else:
+        frappe.throw(_("Either amount or line_items must be provided"))
 
     # Create transaction
     transaction_create = TransactionCreate(
@@ -49,17 +80,29 @@ def create_transaction(line_items, currency, **kwargs):
         auto_confirmation_enabled=kwargs.get("auto_confirm", True),
         merchant_reference=kwargs.get("merchant_reference"),
         customer_id=kwargs.get("customer_id"),
-        customer_email_address=kwargs.get("email"),
+        customer_email_address=kwargs.get("customer_email"),
         success_url=kwargs.get("success_url"),
         failed_url=kwargs.get("failed_url")
     )
 
     try:
-        response = service.create(space_id, transaction_create)
-        log_api_call("POST", "transactions", transaction_create.to_dict(), response.to_dict())
-        return response
+        # Create the transaction
+        response = service.post_payment_transactions(space_id, transaction_create)
+        log_api_call("POST", "payment/transactions", transaction_create.to_dict(), response.to_dict())
+
+        transaction_id = response.id
+
+        # Get payment page URL
+        payment_url = service.get_payment_transactions_id_payment_page_url(space_id, transaction_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/payment-page-url", response_data=payment_url)
+
+        return {
+            "transaction_id": transaction_id,
+            "payment_url": payment_url,
+            "state": response.state.value if response.state else None
+        }
     except Exception as e:
-        log_api_call("POST", "transactions", transaction_create.to_dict(), error=e)
+        log_api_call("POST", "payment/transactions", transaction_create.to_dict() if transaction_create else {}, error=e)
         raise
 
 
@@ -73,15 +116,15 @@ def get_transaction_status(transaction_id):
     Returns:
         dict: Basic status information
     """
-    from wallee.service.transactions_service import TransactionsService
+    from wallee import TransactionsService
 
     config = get_wallee_client()
     space_id = get_space_id()
     service = TransactionsService(config)
 
     try:
-        response = service.read(space_id, transaction_id)
-        log_api_call("GET", f"transactions/{transaction_id}", response_data=response.to_dict())
+        response = service.get_payment_transactions_id(space_id, transaction_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}", response_data=response.to_dict())
         return {
             "id": response.id,
             "state": response.state.value if response.state else None,
@@ -92,7 +135,7 @@ def get_transaction_status(transaction_id):
             "payment_connector_configuration": response.payment_connector_configuration,
         }
     except Exception as e:
-        log_api_call("GET", f"transactions/{transaction_id}", error=e)
+        log_api_call("GET", f"payment/transactions/{transaction_id}", error=e)
         raise
 
 
@@ -106,37 +149,37 @@ def get_full_transaction(transaction_id):
     Returns:
         dict: Complete transaction data
     """
-    from wallee.service.transactions_service import TransactionsService
+    from wallee import TransactionsService
 
     config = get_wallee_client()
     space_id = get_space_id()
     service = TransactionsService(config)
 
     try:
-        response = service.read(space_id, transaction_id)
-        log_api_call("GET", f"transactions/{transaction_id}/full", response_data=response.to_dict())
+        response = service.get_payment_transactions_id(space_id, transaction_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/full", response_data=response.to_dict())
 
         # Return the full response object converted to dict
         return response.to_dict()
     except Exception as e:
-        log_api_call("GET", f"transactions/{transaction_id}/full", error=e)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/full", error=e)
         raise
 
 
 def complete_transaction_online(transaction_id):
     """Complete an online transaction (capture)"""
-    from wallee.service.transactions_service import TransactionsService
+    from wallee import TransactionsService
 
     config = get_wallee_client()
     space_id = get_space_id()
     service = TransactionsService(config)
 
     try:
-        response = service.complete_online(space_id, transaction_id)
-        log_api_call("POST", f"transactions/{transaction_id}/complete-online", response_data=response.to_dict())
+        response = service.post_payment_transactions_id_complete_online(space_id, transaction_id)
+        log_api_call("POST", f"payment/transactions/{transaction_id}/complete-online", response_data=response.to_dict())
         return response
     except Exception as e:
-        log_api_call("POST", f"transactions/{transaction_id}/complete-online", error=e)
+        log_api_call("POST", f"payment/transactions/{transaction_id}/complete-online", error=e)
         raise
 
 
@@ -147,61 +190,53 @@ def capture_transaction(transaction_id):
 
 def void_transaction(transaction_id):
     """Void a pending or authorized transaction"""
-    from wallee.service.transactions_service import TransactionsService
+    from wallee import TransactionsService
 
     config = get_wallee_client()
     space_id = get_space_id()
     service = TransactionsService(config)
 
     try:
-        response = service.complete_offline(space_id, transaction_id)
-        log_api_call("POST", f"transactions/{transaction_id}/void", response_data=response.to_dict())
+        response = service.post_payment_transactions_id_void_online(space_id, transaction_id)
+        log_api_call("POST", f"payment/transactions/{transaction_id}/void", response_data=response.to_dict())
         return response
     except Exception as e:
-        log_api_call("POST", f"transactions/{transaction_id}/void", error=e)
+        log_api_call("POST", f"payment/transactions/{transaction_id}/void", error=e)
         raise
 
 
 def get_payment_page_url(transaction_id):
     """Get the payment page URL for a transaction"""
-    from wallee.service.transactions_service import TransactionsService
+    from wallee import TransactionsService
 
     config = get_wallee_client()
     space_id = get_space_id()
     service = TransactionsService(config)
 
     try:
-        response = service.build_payment_page_url(space_id, transaction_id)
-        log_api_call("GET", f"transactions/{transaction_id}/payment-page-url", response_data=response)
+        response = service.get_payment_transactions_id_payment_page_url(space_id, transaction_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/payment-page-url", response_data=response)
         return response
     except Exception as e:
-        log_api_call("GET", f"transactions/{transaction_id}/payment-page-url", error=e)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/payment-page-url", error=e)
         raise
 
 
 def search_transactions(filters=None, page=0, size=20):
-    """Search transactions with filters"""
-    from wallee.service.transactions_service import TransactionsService
-    from wallee.models import EntityQuery, EntityQueryFilter
+    """Search transactions with filters - returns list of transactions"""
+    from wallee import TransactionsService
 
     config = get_wallee_client()
     space_id = get_space_id()
     service = TransactionsService(config)
 
-    query = EntityQuery(
-        number_of_entities=size,
-        start_position=page * size
-    )
-
-    if filters:
-        query.filter = EntityQueryFilter(**filters)
-
     try:
-        response = service.search(space_id, query)
-        log_api_call("POST", "transactions/search", query.to_dict(), [t.to_dict() for t in response])
+        # Use simple list endpoint with pagination
+        response = service.get_payment_transactions(space_id)
+        log_api_call("GET", "payment/transactions", {}, [t.to_dict() for t in response] if response else [])
         return response
     except Exception as e:
-        log_api_call("POST", "transactions/search", query.to_dict(), error=e)
+        log_api_call("GET", "payment/transactions", {}, error=e)
         raise
 
 
@@ -215,31 +250,26 @@ def get_transaction_completions(transaction_id):
     Returns:
         list: List of completion objects
     """
-    from wallee.service.transaction_completions_service import TransactionCompletionsService
-    from wallee.models import EntityQuery, EntityQueryFilter, EntityQueryFilterType
+    from wallee import TransactionCompletionService
 
     config = get_wallee_client()
     space_id = get_space_id()
-    service = TransactionCompletionsService(config)
-
-    query = EntityQuery(
-        filter=EntityQueryFilter(
-            type=EntityQueryFilterType.LEAF,
-            field_name="lineItemVersion.transaction.id",
-            value=transaction_id,
-            operator="EQUALS"
-        )
-    )
+    service = TransactionCompletionService(config)
 
     try:
-        response = service.search(space_id, query)
+        # Get completions for transaction
+        response = service.get_payment_transaction_completion(space_id)
+        # Filter by transaction_id
+        completions = [c for c in response if c.line_item_version and
+                       c.line_item_version.transaction and
+                       c.line_item_version.transaction.id == int(transaction_id)]
         log_api_call(
-            "POST",
-            f"transaction-completions/search",
-            query.to_dict(),
-            [c.to_dict() for c in response]
+            "GET",
+            f"payment/transaction-completion",
+            {"transaction_id": transaction_id},
+            [c.to_dict() for c in completions]
         )
-        return response
+        return completions
     except Exception as e:
-        log_api_call("POST", f"transaction-completions/search", query.to_dict(), error=e)
+        log_api_call("GET", f"payment/transaction-completion", {"transaction_id": transaction_id}, error=e)
         raise

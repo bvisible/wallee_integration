@@ -19,6 +19,7 @@
   "pos_invoice",
   "sales_invoice",
   "sales_order",
+  "payment_request",
   "section_items",
   "items",
   "section_payment",
@@ -167,6 +168,12 @@
    "fieldtype": "Link",
    "label": "Sales Order",
    "options": "Sales Order"
+  },
+  {
+   "fieldname": "payment_request",
+   "fieldtype": "Link",
+   "label": "Payment Request",
+   "options": "Payment Request"
   },
   {
    "fieldname": "section_items",
