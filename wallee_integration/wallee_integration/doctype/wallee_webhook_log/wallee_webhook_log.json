@@ -1,0 +1,166 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "WLOG-.YYYY.-.######",
+ "creation": "2024-12-10 14:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp",
+  "event_type",
+  "entity_type",
+  "column_break_1",
+  "entity_id",
+  "space_id",
+  "listener_entity_id",
+  "section_status",
+  "http_status",
+  "processing_status",
+  "column_break_status",
+  "error_message",
+  "linked_transaction",
+  "section_payload",
+  "request_headers",
+  "request_payload",
+  "response_payload"
+ ],
+ "fields": [
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "label": "Timestamp",
+   "reqd": 1,
+   "default": "Now",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Data",
+   "label": "Event Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "e.g., transaction.completed, refund.succeeded"
+  },
+  {
+   "fieldname": "entity_type",
+   "fieldtype": "Select",
+   "label": "Entity Type",
+   "options": "Transaction\nRefund\nTerminal\nCompletion\nOther",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "entity_id",
+   "fieldtype": "Data",
+   "label": "Entity ID",
+   "description": "Wallee ID of the entity"
+  },
+  {
+   "fieldname": "space_id",
+   "fieldtype": "Int",
+   "label": "Space ID"
+  },
+  {
+   "fieldname": "listener_entity_id",
+   "fieldtype": "Data",
+   "label": "Listener Entity ID",
+   "description": "Wallee webhook listener ID"
+  },
+  {
+   "fieldname": "section_status",
+   "fieldtype": "Section Break",
+   "label": "Processing Status"
+  },
+  {
+   "fieldname": "http_status",
+   "fieldtype": "Int",
+   "label": "HTTP Status",
+   "description": "HTTP response code (200, 500, etc.)"
+  },
+  {
+   "fieldname": "processing_status",
+   "fieldtype": "Select",
+   "label": "Processing Status",
+   "options": "Received\nProcessed\nFailed\nIgnored",
+   "default": "Received",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "error_message",
+   "fieldtype": "Small Text",
+   "label": "Error Message",
+   "description": "Error details if processing failed"
+  },
+  {
+   "fieldname": "linked_transaction",
+   "fieldtype": "Link",
+   "label": "Linked Transaction",
+   "options": "Wallee Transaction"
+  },
+  {
+   "fieldname": "section_payload",
+   "fieldtype": "Section Break",
+   "label": "Payload Data",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "request_headers",
+   "fieldtype": "JSON",
+   "label": "Request Headers",
+   "description": "HTTP headers from the webhook request"
+  },
+  {
+   "fieldname": "request_payload",
+   "fieldtype": "JSON",
+   "label": "Request Payload",
+   "description": "Raw JSON payload received"
+  },
+  {
+   "fieldname": "response_payload",
+   "fieldtype": "JSON",
+   "label": "Response Payload",
+   "description": "Response sent back to Wallee"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-12-10 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wallee Integration",
+ "name": "Wallee Webhook Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Accounts Manager",
+   "export": 1
+  }
+ ],
+ "sort_field": "timestamp",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

@@ -19,12 +19,36 @@
   "pos_invoice",
   "sales_invoice",
   "sales_order",
+  "section_items",
+  "items",
   "section_payment",
   "payment_method",
   "payment_connector",
   "column_break_payment",
+  "payment_method_brand",
+  "authorization_environment",
+  "section_card",
   "card_brand",
   "card_last_four",
+  "card_holder_name",
+  "column_break_card",
+  "card_expiry_month",
+  "card_expiry_year",
+  "authentication_indicator",
+  "section_completion",
+  "completion_id",
+  "completion_state",
+  "completion_amount",
+  "column_break_completion",
+  "statement_descriptor",
+  "processor_reference",
+  "section_fees",
+  "wallee_fee",
+  "net_amount",
+  "column_break_fees",
+  "settlement_amount",
+  "settlement_date",
+  "settlement_state",
   "section_terminal",
   "terminal",
   "terminal_id",
@@ -41,6 +65,14 @@
   "column_break_details",
   "refunded_amount",
   "failure_reason",
+  "section_refund",
+  "refund_id",
+  "refund_state",
+  "refund_amount",
+  "column_break_refund",
+  "refund_reason",
+  "refund_date",
+  "refund_processor_reference",
   "section_timestamps",
   "authorized_on",
   "completed_on",
@@ -68,7 +100,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Pending\nProcessing\nAuthorized\nCompleted\nFailed\nVoided\nRefunded\nPartially Refunded",
+   "options": "Pending\nConfirmed\nProcessing\nAuthorized\nCompleted\nFulfill\nDecline\nFailed\nVoided\nRefunded\nPartially Refunded",
    "in_list_view": 1,
    "in_standard_filter": 1
   },
@@ -137,6 +169,19 @@
    "options": "Sales Order"
   },
   {
+   "fieldname": "section_items",
+   "fieldtype": "Section Break",
+   "label": "Line Items",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Wallee Transaction Item",
+   "description": "Line items from the transaction"
+  },
+  {
    "fieldname": "section_payment",
    "fieldtype": "Section Break",
    "label": "Payment Details"
@@ -156,14 +201,157 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "payment_method_brand",
+   "fieldtype": "Data",
+   "label": "Payment Method Brand",
+   "description": "Brand of the payment method used"
+  },
+  {
+   "fieldname": "authorization_environment",
+   "fieldtype": "Data",
+   "label": "Authorization Environment",
+   "read_only": 1,
+   "description": "Environment where transaction was authorized"
+  },
+  {
+   "fieldname": "section_card",
+   "fieldtype": "Section Break",
+   "label": "Card Details",
+   "collapsible": 1,
+   "depends_on": "eval:doc.card_brand || doc.card_last_four"
+  },
+  {
    "fieldname": "card_brand",
    "fieldtype": "Data",
-   "label": "Card Brand"
+   "label": "Card Brand",
+   "read_only": 1,
+   "description": "Visa, Mastercard, Amex, etc."
   },
   {
    "fieldname": "card_last_four",
    "fieldtype": "Data",
-   "label": "Card Last Four"
+   "label": "Card Last Four",
+   "read_only": 1
+  },
+  {
+   "fieldname": "card_holder_name",
+   "fieldtype": "Data",
+   "label": "Card Holder Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_card",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "card_expiry_month",
+   "fieldtype": "Data",
+   "label": "Expiry Month",
+   "read_only": 1
+  },
+  {
+   "fieldname": "card_expiry_year",
+   "fieldtype": "Data",
+   "label": "Expiry Year",
+   "read_only": 1
+  },
+  {
+   "fieldname": "authentication_indicator",
+   "fieldtype": "Data",
+   "label": "Authentication Indicator",
+   "read_only": 1,
+   "description": "3DS authentication status"
+  },
+  {
+   "fieldname": "section_completion",
+   "fieldtype": "Section Break",
+   "label": "Completion Details",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "completion_id",
+   "fieldtype": "Data",
+   "label": "Completion ID",
+   "read_only": 1,
+   "description": "Wallee Completion ID"
+  },
+  {
+   "fieldname": "completion_state",
+   "fieldtype": "Select",
+   "label": "Completion State",
+   "options": "\nPending\nSuccessful\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completion_amount",
+   "fieldtype": "Currency",
+   "label": "Completion Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_completion",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "statement_descriptor",
+   "fieldtype": "Data",
+   "label": "Statement Descriptor",
+   "read_only": 1,
+   "description": "Text appearing on bank statement"
+  },
+  {
+   "fieldname": "processor_reference",
+   "fieldtype": "Data",
+   "label": "Processor Reference",
+   "read_only": 1,
+   "description": "Reference from payment processor"
+  },
+  {
+   "fieldname": "section_fees",
+   "fieldtype": "Section Break",
+   "label": "Fees & Settlement",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "wallee_fee",
+   "fieldtype": "Currency",
+   "label": "Wallee Fee",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Processing fee charged by Wallee"
+  },
+  {
+   "fieldname": "net_amount",
+   "fieldtype": "Currency",
+   "label": "Net Amount",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Amount after fees"
+  },
+  {
+   "fieldname": "column_break_fees",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "settlement_amount",
+   "fieldtype": "Currency",
+   "label": "Settlement Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_date",
+   "fieldtype": "Date",
+   "label": "Settlement Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_state",
+   "fieldtype": "Select",
+   "label": "Settlement State",
+   "options": "\nPending\nSettled",
+   "read_only": 1
   },
   {
    "fieldname": "section_terminal",
@@ -255,6 +443,55 @@
    "read_only": 1
   },
   {
+   "fieldname": "section_refund",
+   "fieldtype": "Section Break",
+   "label": "Refund Details",
+   "collapsible": 1,
+   "depends_on": "eval:doc.refund_id || doc.refund_amount"
+  },
+  {
+   "fieldname": "refund_id",
+   "fieldtype": "Data",
+   "label": "Refund ID",
+   "read_only": 1,
+   "description": "Wallee Refund ID"
+  },
+  {
+   "fieldname": "refund_state",
+   "fieldtype": "Select",
+   "label": "Refund State",
+   "options": "\nPending\nSuccessful\nFailed\nManual Check",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Amount",
+   "options": "currency",
+   "description": "Amount to refund"
+  },
+  {
+   "fieldname": "column_break_refund",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "refund_reason",
+   "fieldtype": "Small Text",
+   "label": "Refund Reason"
+  },
+  {
+   "fieldname": "refund_date",
+   "fieldtype": "Datetime",
+   "label": "Refund Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_processor_reference",
+   "fieldtype": "Data",
+   "label": "Refund Processor Reference",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_timestamps",
    "fieldtype": "Section Break",
    "label": "Timestamps",
@@ -323,7 +560,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-10 12:00:00.000000",
+ "modified": "2024-12-10 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wallee Integration",
  "name": "Wallee Transaction",

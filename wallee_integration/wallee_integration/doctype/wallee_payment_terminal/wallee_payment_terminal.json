@@ -19,6 +19,7 @@
   "default_currency",
   "pos_profile",
   "section_location",
+  "wallee_location",
   "location",
   "column_break_location",
   "warehouse",
@@ -103,9 +104,17 @@
    "label": "Location"
   },
   {
+   "fieldname": "wallee_location",
+   "fieldtype": "Link",
+   "label": "Wallee Location",
+   "options": "Wallee Location",
+   "description": "Link to Wallee Location DocType"
+  },
+  {
    "fieldname": "location",
    "fieldtype": "Data",
-   "label": "Location"
+   "label": "Location (Legacy)",
+   "description": "Legacy text field for location"
   },
   {
    "fieldname": "column_break_location",
@@ -148,7 +157,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-10 12:00:00.000000",
+ "modified": "2024-12-10 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wallee Integration",
  "name": "Wallee Payment Terminal",
