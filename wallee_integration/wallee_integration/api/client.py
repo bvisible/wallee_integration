@@ -104,3 +104,88 @@ def test_connection():
 			"success": False,
 			"error": str(e)
 		}
+
+
+@frappe.whitelist()
+def setup_webshop_integration(currency="CHF", payment_account=None, checkout_title="Wallee", checkout_description=None):
+	"""
+	Setup complete webshop integration for Wallee.
+	Creates Payment Gateway, Payment Gateway Account, and adds to Webshop Settings.
+
+	Args:
+		currency: Currency code (default: CHF)
+		payment_account: Bank/Cash account for payments
+		checkout_title: Title shown at checkout
+		checkout_description: Description shown at checkout
+
+	Returns:
+		dict: {success: bool, payment_gateway: str, payment_gateway_account: str, error: str}
+	"""
+	try:
+		# Step 1: Ensure Payment Gateway exists
+		if not frappe.db.exists("Payment Gateway", "Wallee"):
+			gateway = frappe.get_doc({
+				"doctype": "Payment Gateway",
+				"gateway": "Wallee",
+				"gateway_settings": "Wallee Settings"
+			})
+			gateway.insert(ignore_permissions=True)
+			frappe.db.commit()
+
+		# Step 2: Create Payment Gateway Account
+		account_name = f"Wallee - {currency}"
+
+		if not frappe.db.exists("Payment Gateway Account", account_name):
+			pga = frappe.get_doc({
+				"doctype": "Payment Gateway Account",
+				"payment_gateway": "Wallee",
+				"currency": currency,
+				"payment_account": payment_account,
+				"checkout_title": checkout_title or "Wallee",
+				"checkout_description": checkout_description or _("Pay securely with credit card"),
+				"is_default": 0
+			})
+			pga.insert(ignore_permissions=True)
+			frappe.db.commit()
+		else:
+			# Update existing
+			pga = frappe.get_doc("Payment Gateway Account", account_name)
+			if payment_account:
+				pga.payment_account = payment_account
+			if checkout_title:
+				pga.checkout_title = checkout_title
+			if checkout_description:
+				pga.checkout_description = checkout_description
+			pga.save(ignore_permissions=True)
+			frappe.db.commit()
+
+		# Step 3: Add to Webshop Settings payment methods
+		if frappe.db.exists("DocType", "Webshop Settings"):
+			webshop_settings = frappe.get_single("Webshop Settings")
+
+			# Check if Wallee is already in payment methods
+			existing = False
+			for method in webshop_settings.payment_methods:
+				if method.payment_gateway_account == account_name:
+					existing = True
+					break
+
+			if not existing:
+				webshop_settings.append("payment_methods", {
+					"payment_gateway_account": account_name
+				})
+				webshop_settings.save(ignore_permissions=True)
+				frappe.db.commit()
+
+		return {
+			"success": True,
+			"payment_gateway": "Wallee",
+			"payment_gateway_account": account_name
+		}
+
+	except Exception as e:
+		frappe.log_error(f"Failed to setup Wallee webshop integration: {str(e)}", "Wallee Setup Error")
+		return {
+			"success": False,
+			"error": str(e)
+		}

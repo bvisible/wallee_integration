@@ -20,11 +20,18 @@ frappe.ui.form.on('Wallee Settings', {
             test_wallee_connection(frm);
         });
 
+        // Setup Webshop Integration button
+        if (frm.doc.enable_webshop) {
+            frm.add_custom_button(__('Setup Webshop'), function() {
+                setup_webshop_integration(frm);
+            }, __('Actions'));
+        }
+
         // Sync Terminals button
         if (frm.doc.enable_pos_terminal) {
             frm.add_custom_button(__('Sync Terminals'), function() {
                 sync_terminals();
-            });
+            }, __('Actions'));
         }
 
         // Display connection status
@@ -337,4 +344,120 @@ function sync_terminals() {
             }
         }
     });
+}
+
+function setup_webshop_integration(frm) {
+    // Show dialog to configure webshop integration
+    let d = new frappe.ui.Dialog({
+        title: __('Setup Webshop Integration'),
+        size: 'large',
+        fields: [
+            {
+                fieldtype: 'HTML',
+                fieldname: 'intro_html',
+                options: `
+                    <div class="alert alert-info">
+                        <strong>${__('Automatic Configuration')}</strong><br>
+                        ${__('This will create the necessary Payment Gateway Account and add Wallee to your Webshop payment methods.')}
+                    </div>
+                `
+            },
+            {
+                fieldtype: 'Section Break',
+                label: __('Payment Gateway Account')
+            },
+            {
+                label: __('Currency'),
+                fieldname: 'currency',
+                fieldtype: 'Link',
+                options: 'Currency',
+                reqd: 1,
+                default: 'CHF',
+                description: __('Currency for this payment gateway account')
+            },
+            {
+                fieldtype: 'Column Break'
+            },
+            {
+                label: __('Payment Account'),
+                fieldname: 'payment_account',
+                fieldtype: 'Link',
+                options: 'Account',
+                description: __('Bank/Payment account for received payments'),
+                get_query: function() {
+                    return {
+                        filters: {
+                            'account_type': ['in', ['Bank', 'Cash']],
+                            'is_group': 0
+                        }
+                    };
+                }
+            },
+            {
+                fieldtype: 'Section Break',
+                label: __('Display Settings')
+            },
+            {
+                label: __('Checkout Title'),
+                fieldname: 'checkout_title',
+                fieldtype: 'Data',
+                default: 'Wallee',
+                description: __('Title shown at checkout')
+            },
+            {
+                fieldtype: 'Column Break'
+            },
+            {
+                label: __('Checkout Description'),
+                fieldname: 'checkout_description',
+                fieldtype: 'Small Text',
+                default: __('Pay securely with credit card'),
+                description: __('Description shown at checkout')
+            }
+        ],
+        primary_action_label: __('Create & Configure'),
+        primary_action: function(values) {
+            frappe.call({
+                method: 'wallee_integration.wallee_integration.api.client.setup_webshop_integration',
+                args: {
+                    currency: values.currency,
+                    payment_account: values.payment_account,
+                    checkout_title: values.checkout_title,
+                    checkout_description: values.checkout_description
+                },
+                freeze: true,
+                freeze_message: __('Setting up Webshop integration...'),
+                callback: function(r) {
+                    d.hide();
+                    if (r.message && r.message.success) {
+                        frappe.msgprint({
+                            title: __('✓ Webshop Integration Configured'),
+                            indicator: 'green',
+                            message: `
+                                <p>${__('The following items were created/configured:')}</p>
+                                <ul>
+                                    <li><strong>${__('Payment Gateway')}:</strong> ${r.message.payment_gateway || 'Wallee'}</li>
+                                    <li><strong>${__('Payment Gateway Account')}:</strong> ${r.message.payment_gateway_account}</li>
+                                    <li><strong>${__('Webshop Payment Method')}:</strong> ${__('Added to Webshop Settings')}</li>
+                                </ul>
+                                <hr>
+                                <p class="text-success">
+                                    <strong>✓ ${__('Wallee is now available as a payment option in your webshop!')}</strong>
+                                </p>
+                            `
+                        });
+                        frm.reload_doc();
+                    } else {
+                        frappe.msgprint({
+                            title: __('Setup Failed'),
+                            indicator: 'red',
+                            message: r.message ? r.message.error : __('Unknown error occurred')
+                        });
+                    }
+                }
+            });
+        }
+    });
+
+    d.show();
 }
