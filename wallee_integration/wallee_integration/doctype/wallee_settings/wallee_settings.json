@@ -46,14 +46,14 @@
    "fieldtype": "Int",
    "label": "User ID",
    "mandatory_depends_on": "eval:doc.enabled",
-   "description": "Your Wallee Application User ID"
+   "description": "Your Wallee Application User ID. <a href='https://app-wallee.com/user/login' target='_blank'>Go to Wallee</a> → Account → Users → Application Users"
   },
   {
    "fieldname": "authentication_key",
    "fieldtype": "Password",
    "label": "Authentication Key",
    "mandatory_depends_on": "eval:doc.enabled",
-   "description": "Your Wallee Authentication Key"
+   "description": "The BASE64 key shown when creating an Application User (shown only once!)"
   },
   {
    "fieldname": "column_break_1",
@@ -64,7 +64,7 @@
    "fieldtype": "Int",
    "label": "Space ID",
    "mandatory_depends_on": "eval:doc.enabled",
-   "description": "Your Wallee Space ID"
+   "description": "The number shown next to your company name in Wallee (e.g., #12345)"
   },
   {
    "default": "https://app-wallee.com/api/v2.0",
