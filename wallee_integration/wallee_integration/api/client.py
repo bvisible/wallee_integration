@@ -132,10 +132,28 @@ def setup_webshop_integration(currency="CHF", payment_account=None, checkout_tit
 			gateway.insert(ignore_permissions=True)
 			frappe.db.commit()
 
-		# Step 2: Create Payment Gateway Account
-		account_name = f"Wallee - {currency}"
+		# Step 2: Find or create Payment Gateway Account
+		# Search by payment_gateway and currency (name may have suffix)
+		existing_pga = frappe.db.get_value(
+			"Payment Gateway Account",
+			{"payment_gateway": "Wallee", "currency": currency},
+			"name"
+		)
 
-		if not frappe.db.exists("Payment Gateway Account", account_name):
+		if existing_pga:
+			# Update existing
+			pga = frappe.get_doc("Payment Gateway Account", existing_pga)
+			if payment_account:
+				pga.payment_account = payment_account
+			if checkout_title:
+				pga.checkout_title = checkout_title
+			if checkout_description:
+				pga.checkout_description = checkout_description
+			pga.save(ignore_permissions=True)
+			frappe.db.commit()
+			account_name = existing_pga
+		else:
+			# Create new
 			pga = frappe.get_doc({
 				"doctype": "Payment Gateway Account",
 				"payment_gateway": "Wallee",
@@ -147,23 +165,13 @@ def setup_webshop_integration(currency="CHF", payment_account=None, checkout_tit
 			})
 			pga.insert(ignore_permissions=True)
 			frappe.db.commit()
-		else:
-			# Update existing
-			pga = frappe.get_doc("Payment Gateway Account", account_name)
-			if payment_account:
-				pga.payment_account = payment_account
-			if checkout_title:
-				pga.checkout_title = checkout_title
-			if checkout_description:
-				pga.checkout_description = checkout_description
-			pga.save(ignore_permissions=True)
-			frappe.db.commit()
+			account_name = pga.name
 
 		# Step 3: Add to Webshop Settings payment methods
 		if frappe.db.exists("DocType", "Webshop Settings"):
 			webshop_settings = frappe.get_single("Webshop Settings")
 
-			# Check if Wallee is already in payment methods
+			# Check if Wallee is already in payment methods (by actual account name)
 			existing = False
 			for method in webshop_settings.payment_methods:
 				if method.payment_gateway_account == account_name:
