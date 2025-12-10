@@ -24,7 +24,7 @@ def create_payment_gateway():
 		gateway = frappe.get_doc({
 			"doctype": "Payment Gateway",
 			"gateway": "Wallee",
-			"gateway_controller": "Wallee Settings"
+			"gateway_settings": "Wallee Settings"
 		})
 		gateway.insert(ignore_permissions=True)
 		frappe.db.commit()
