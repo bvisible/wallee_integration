@@ -139,7 +139,8 @@ function show_setup_wizard(frm, step) {
 
     } else if (step === 'credentials') {
         const space_id = frm.doc.space_id;
-        const app_user_url = `https://app-wallee.com/s/${space_id}/application-user/list`;
+        // Account ID is used for user management, not space ID
+        const app_user_url = `https://app-wallee.com/a/${space_id}/user/application/list`;
 
         d = new frappe.ui.Dialog({
             title: __('Wallee Setup - Step 2: API Credentials'),

@@ -46,7 +46,7 @@
    "fieldtype": "Int",
    "label": "User ID",
    "mandatory_depends_on": "eval:doc.enabled",
-   "description": "Your Wallee Application User ID. <a href='https://app-wallee.com/user/login' target='_blank'>Go to Wallee</a> → Account → Users → Application Users"
+   "description": "Your Wallee Application User ID. <a href='https://app-wallee.com' target='_blank'>Go to Wallee</a> → Account → Users → Application Users"
   },
   {
    "fieldname": "authentication_key",
