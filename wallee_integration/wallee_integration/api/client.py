@@ -70,3 +70,44 @@ def reset_client():
 	"""Reset the cached client (useful after settings change)"""
 	global _wallee_client
 	_wallee_client = None
+
+
+@frappe.whitelist()
+def test_connection():
+	"""
+	Test connection to Wallee API
+
+	Returns:
+		dict: {success: bool, space_name: str, space_info: dict, error: str}
+	"""
+	try:
+		from wallee.service.account_service import AccountService
+
+		config = get_wallee_client()
+		space_id = get_space_id()
+
+		# Try to read the space to verify connection
+		service = AccountService(config)
+		space = service.read(space_id)
+
+		space_info = {}
+		if space:
+			space_info = {
+				"id": space.id,
+				"name": getattr(space, "name", None),
+				"state": getattr(space, "state", {}).value if hasattr(getattr(space, "state", None), "value") else str(getattr(space, "state", "Unknown"))
+			}
+
+		log_api_call("GET", f"account/{space_id}", response_data=space_info)
+
+		return {
+			"success": True,
+			"space_name": space_info.get("name"),
+			"space_info": space_info
+		}
+	except Exception as e:
+		log_api_call("GET", "account/test", error=e)
+		return {
+			"success": False,
+			"error": str(e)
+		}
