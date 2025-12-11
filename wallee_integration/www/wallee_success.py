@@ -20,8 +20,12 @@ def get_context(context):
     """
     payment_request_name = frappe.form_dict.get("payment_request")
 
-    # Debug log entry point
-    frappe.logger().info(f"[Wallee Success] START - payment_request={payment_request_name}")
+    # Debug log - use print which goes to web server logs
+    def debug_log(msg):
+        print(f"[Wallee Success] {msg}")
+        frappe.log_error(msg, "Wallee Debug")
+
+    debug_log(f"START - payment_request={payment_request_name}")
 
     # Initialize context
     context.transaction = None
