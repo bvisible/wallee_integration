@@ -123,6 +123,8 @@
 
 .wallee-card-header {
     display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
     align-items: center;
     margin-bottom: 16px;
 }
