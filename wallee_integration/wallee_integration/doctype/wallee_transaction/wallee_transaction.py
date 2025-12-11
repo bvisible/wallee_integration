@@ -106,45 +106,52 @@ STATUS_MAP = {
 }
 
 
-def update_transaction_from_wallee(doc, data):
+def update_transaction_from_wallee(doc, tx):
     """
     Update transaction document from Wallee API response.
 
     Args:
         doc: Wallee Transaction document
-        data: Full transaction data from Wallee API (dict or object)
+        tx: Full transaction object from Wallee API (Transaction object, NOT dict)
+             Note: SDK to_dict() truncates data, so we access attributes directly
     """
-    # Convert object to dict if needed
-    if hasattr(data, "to_dict"):
-        data = data.to_dict()
+    # Helper to safely get attribute from object or dict
+    def get_attr(obj, attr, default=None):
+        if hasattr(obj, attr):
+            return getattr(obj, attr, default)
+        elif isinstance(obj, dict):
+            return obj.get(attr, default)
+        return default
 
-    # Update status
+    # Update status - access state attribute directly
     wallee_status = ""
-    if data.get("state"):
-        if hasattr(data["state"], "value"):
-            wallee_status = data["state"].value.upper()
+    state = get_attr(tx, "state")
+    if state:
+        if hasattr(state, "value"):
+            wallee_status = state.value.upper()
         else:
-            wallee_status = str(data["state"]).upper()
+            wallee_status = str(state).upper()
 
     new_status = STATUS_MAP.get(wallee_status, doc.status)
 
     # Handle refund status
-    refunded_amount = data.get("refunded_amount") or data.get("refundedAmount") or 0
+    refunded_amount = get_attr(tx, "refunded_amount") or 0
     if refunded_amount > 0:
-        if refunded_amount >= (data.get("authorized_amount") or data.get("authorizedAmount") or doc.amount):
+        authorized = get_attr(tx, "authorization_amount") or doc.amount
+        if refunded_amount >= authorized:
             new_status = "Refunded"
         else:
             new_status = "Partially Refunded"
 
     doc.status = new_status
 
-    # Update amounts
-    doc.authorized_amount = data.get("authorized_amount") or data.get("authorizedAmount")
-    doc.captured_amount = data.get("completed_amount") or data.get("completedAmount")
+    # Update amounts - access attributes directly
+    doc.authorized_amount = get_attr(tx, "authorization_amount")
+    doc.captured_amount = get_attr(tx, "completed_amount")
     doc.refunded_amount = refunded_amount
 
     # Update failure reason
-    failure_reason = data.get("failure_reason") or data.get("failureReason")
+    failure_reason = get_attr(tx, "failure_reason")
     if failure_reason:
         if isinstance(failure_reason, dict):
             doc.failure_reason = failure_reason.get("description") or str(failure_reason)
@@ -154,18 +161,18 @@ def update_transaction_from_wallee(doc, data):
             doc.failure_reason = str(failure_reason)
 
     # Update fees and settlement
-    doc.wallee_fee = data.get("total_applied_fees") or data.get("totalAppliedFees")
-    doc.settlement_amount = data.get("total_settled_amount") or data.get("totalSettledAmount")
+    doc.wallee_fee = get_attr(tx, "total_applied_fees")
+    doc.settlement_amount = get_attr(tx, "total_settled_amount")
     if doc.captured_amount and doc.wallee_fee:
         doc.net_amount = doc.captured_amount - doc.wallee_fee
 
     # Update authorization environment
-    auth_env = data.get("authorization_environment") or data.get("authorizationEnvironment")
+    auth_env = get_attr(tx, "authorization_environment")
     if auth_env:
         doc.authorization_environment = str(auth_env.value if hasattr(auth_env, "value") else auth_env)
 
     # Update payment method info
-    payment_connector = data.get("payment_connector_configuration") or data.get("paymentConnectorConfiguration")
+    payment_connector = get_attr(tx, "payment_connector_configuration")
     if payment_connector:
         if isinstance(payment_connector, dict):
             doc.payment_connector = payment_connector.get("name")
@@ -173,97 +180,108 @@ def update_transaction_from_wallee(doc, data):
             doc.payment_connector = payment_connector.name
 
     # Update card details from payment method data
-    _update_card_details(doc, data)
+    _update_card_details(doc, tx)
 
     # Update completion details
-    _update_completion_details(doc, data)
+    _update_completion_details(doc, tx)
 
     # Update line items
-    _update_line_items(doc, data)
+    _update_line_items(doc, tx)
 
     # Update timestamps
     if new_status == "Authorized" and not doc.authorized_on:
         doc.authorized_on = now_datetime()
     elif new_status in ["Completed", "Fulfill"] and not doc.completed_on:
-        completed_on = data.get("completed_on") or data.get("completedOn")
+        completed_on = get_attr(tx, "completed_on")
         doc.completed_on = completed_on or now_datetime()
     elif new_status == "Voided" and not doc.voided_on:
         doc.voided_on = now_datetime()
 
-    # Store raw data
-    doc.wallee_data = frappe.as_json(data)
+    # Store minimal raw data for debugging (to_dict() truncates, so store key fields)
+    raw_data = {
+        "state": str(get_attr(tx, "state")),
+        "authorization_amount": get_attr(tx, "authorization_amount"),
+        "completed_amount": get_attr(tx, "completed_amount"),
+        "refunded_amount": get_attr(tx, "refunded_amount"),
+        "id": get_attr(tx, "id"),
+    }
+    doc.wallee_data = frappe.as_json(raw_data)
 
     doc.flags.ignore_validate = True
     doc.save(ignore_permissions=True)
     frappe.db.commit()
 
 
-def _update_card_details(doc, data):
+def _update_card_details(doc, tx):
     """Extract and update card details from transaction data."""
-    # Try to get payment method details
-    # Wallee stores this in different places depending on the payment method
+    # Helper to safely get attribute from object or dict
+    def get_attr(obj, attr, default=None):
+        if hasattr(obj, attr):
+            return getattr(obj, attr, default)
+        elif isinstance(obj, dict):
+            return obj.get(attr, default)
+        return default
 
     # Check for token data
-    token = data.get("token")
+    token = get_attr(tx, "token")
     if token:
-        if isinstance(token, dict):
-            token_data = token
-        elif hasattr(token, "to_dict"):
-            token_data = token.to_dict()
-        else:
-            token_data = {}
-
-        if token_data.get("tokenizedPaymentMethod"):
-            pm = token_data["tokenizedPaymentMethod"]
-            doc.card_brand = pm.get("brand") or pm.get("paymentMethodBrand")
-            doc.card_last_four = pm.get("lastDigits") or pm.get("maskedCardNumber", "")[-4:]
-            doc.card_holder_name = pm.get("holderName")
-            doc.card_expiry_month = pm.get("expiryMonth")
-            doc.card_expiry_year = pm.get("expiryYear")
+        tokenized_pm = get_attr(token, "tokenized_payment_method")
+        if tokenized_pm:
+            doc.card_brand = get_attr(tokenized_pm, "brand") or get_attr(tokenized_pm, "payment_method_brand")
+            last_digits = get_attr(tokenized_pm, "last_digits")
+            masked = get_attr(tokenized_pm, "masked_card_number") or ""
+            doc.card_last_four = last_digits or (masked[-4:] if masked else None)
+            doc.card_holder_name = get_attr(tokenized_pm, "holder_name")
+            doc.card_expiry_month = get_attr(tokenized_pm, "expiry_month")
+            doc.card_expiry_year = get_attr(tokenized_pm, "expiry_year")
 
     # Check for allowed payment method brands
-    brands = data.get("allowed_payment_method_brands") or data.get("allowedPaymentMethodBrands")
+    brands = get_attr(tx, "allowed_payment_method_brands")
     if brands and not doc.payment_method_brand:
         if isinstance(brands, list) and len(brands) > 0:
             brand = brands[0]
-            if isinstance(brand, dict):
-                doc.payment_method_brand = brand.get("name")
-            elif hasattr(brand, "name"):
-                doc.payment_method_brand = brand.name
-            else:
-                doc.payment_method_brand = str(brand)
+            doc.payment_method_brand = get_attr(brand, "name") or str(brand)
 
 
-def _update_completion_details(doc, data):
+def _update_completion_details(doc, tx):
     """Update completion/capture details."""
-    # Completion data might be in completions array or as single completion
-    completions = data.get("completions") or []
+    # Helper to safely get attribute from object or dict
+    def get_attr(obj, attr, default=None):
+        if hasattr(obj, attr):
+            return getattr(obj, attr, default)
+        elif isinstance(obj, dict):
+            return obj.get(attr, default)
+        return default
+
+    # Completion data might be in completions array
+    completions = get_attr(tx, "completions") or []
 
     if completions:
         # Get the last successful completion
         for completion in reversed(completions):
-            if isinstance(completion, dict):
-                comp_data = completion
-            elif hasattr(completion, "to_dict"):
-                comp_data = completion.to_dict()
-            else:
-                continue
-
-            state = comp_data.get("state")
+            state = get_attr(completion, "state")
             if state:
                 state_value = state.value if hasattr(state, "value") else str(state)
                 if state_value.upper() == "SUCCESSFUL":
-                    doc.completion_id = str(comp_data.get("id", ""))
+                    doc.completion_id = str(get_attr(completion, "id") or "")
                     doc.completion_state = "Successful"
-                    doc.completion_amount = comp_data.get("amount")
-                    doc.statement_descriptor = comp_data.get("statement_descriptor") or comp_data.get("statementDescriptor")
-                    doc.processor_reference = comp_data.get("processor_reference") or comp_data.get("processorReference")
+                    doc.completion_amount = get_attr(completion, "amount")
+                    doc.statement_descriptor = get_attr(completion, "statement_descriptor")
+                    doc.processor_reference = get_attr(completion, "processor_reference")
                     break
 
 
-def _update_line_items(doc, data):
+def _update_line_items(doc, tx):
     """Update line items from transaction data."""
-    line_items = data.get("line_items") or data.get("lineItems") or []
+    # Helper to safely get attribute from object or dict
+    def get_attr(obj, attr, default=None):
+        if hasattr(obj, attr):
+            return getattr(obj, attr, default)
+        elif isinstance(obj, dict):
+            return obj.get(attr, default)
+        return default
+
+    line_items = get_attr(tx, "line_items") or []
 
     if not line_items:
         return
@@ -272,31 +290,24 @@ def _update_line_items(doc, data):
     doc.items = []
 
     for item in line_items:
-        if isinstance(item, dict):
-            item_data = item
-        elif hasattr(item, "to_dict"):
-            item_data = item.to_dict()
-        else:
-            continue
-
         # Determine item type
-        item_type = item_data.get("type")
+        item_type = get_attr(item, "type")
         if item_type:
             item_type = item_type.value if hasattr(item_type, "value") else str(item_type)
         else:
             item_type = "PRODUCT"
 
         doc.append("items", {
-            "item_name": item_data.get("name", _("Unknown Item")),
-            "unique_id": item_data.get("unique_id") or item_data.get("uniqueId"),
-            "sku": item_data.get("sku"),
-            "quantity": item_data.get("quantity", 1),
-            "unit_price": item_data.get("unit_price_including_tax") or item_data.get("unitPriceIncludingTax"),
-            "amount_including_tax": item_data.get("amount_including_tax") or item_data.get("amountIncludingTax"),
-            "tax_amount": item_data.get("tax_amount") or item_data.get("taxAmount"),
-            "discount_amount": item_data.get("discount_including_tax") or item_data.get("discountIncludingTax"),
+            "item_name": get_attr(item, "name") or _("Unknown Item"),
+            "unique_id": get_attr(item, "unique_id"),
+            "sku": get_attr(item, "sku"),
+            "quantity": get_attr(item, "quantity") or 1,
+            "unit_price": get_attr(item, "unit_price_including_tax"),
+            "amount_including_tax": get_attr(item, "amount_including_tax"),
+            "tax_amount": get_attr(item, "tax_amount"),
+            "discount_amount": get_attr(item, "discount_including_tax"),
             "item_type": item_type.upper() if item_type else "PRODUCT",
-            "attributes": frappe.as_json(item_data.get("attributes")) if item_data.get("attributes") else None
+            "attributes": frappe.as_json(get_attr(item, "attributes")) if get_attr(item, "attributes") else None
         })
 
 

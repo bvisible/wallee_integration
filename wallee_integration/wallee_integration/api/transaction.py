@@ -164,7 +164,7 @@ def get_full_transaction(transaction_id):
         transaction_id: Wallee transaction ID
 
     Returns:
-        dict: Complete transaction data
+        Transaction: Complete transaction object (not dict - SDK to_dict() truncates data)
     """
     from wallee import TransactionsService
 
@@ -174,11 +174,11 @@ def get_full_transaction(transaction_id):
 
     try:
         # Note: method signature is (id, space) not (space, id)
-        response = service.get_payment_transactions_id(transaction_id, space_id)
-        log_api_call("GET", f"payment/transactions/{transaction_id}/full", response_data=response.to_dict())
+        response = service.get_payment_transactions_id(int(transaction_id), space_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/full", response_data={"state": str(response.state)})
 
-        # Return the full response object converted to dict
-        return response.to_dict()
+        # Return the full response object directly (NOT to_dict() which truncates data)
+        return response
     except Exception as e:
         log_api_call("GET", f"payment/transactions/{transaction_id}/full", error=e)
         raise
