@@ -228,3 +228,164 @@ def save_features(enable_webshop=False, enable_pos_terminal=False):
     settings.save(ignore_permissions=True)
     frappe.db.commit()
     return {"success": True}
+
+
+@frappe.whitelist()
+def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
+    """Create dedicated Application Users for Webshop and/or POS with restricted roles"""
+    from wallee import (
+        Configuration,
+        ApplicationUsersService,
+        ApplicationUserCreate,
+        ApplicationUsersRolesService,
+        AccountsService,
+        RolesService
+    )
+
+    settings = frappe.get_single("Wallee Settings")
+
+    if not settings.user_id or not settings.authentication_key:
+        return {
+            "success": False,
+            "error": _("Admin credentials not configured. Please complete Step 3 first.")
+        }
+
+    config = Configuration(
+        user_id=int(settings.user_id),
+        authentication_key=settings.get_password("authentication_key")
+    )
+
+    results = {
+        "success": True,
+        "webshop": None,
+        "pos": None
+    }
+
+    try:
+        # Get Account ID
+        acc_service = AccountsService(config)
+        accounts = acc_service.get_accounts(limit=1)
+        if not accounts.data:
+            return {"success": False, "error": _("No Wallee account found")}
+
+        account_id = accounts.data[0].id
+        space_id = int(settings.space_id)
+
+        # Save account_id to settings
+        settings.account_id = account_id
+
+        # Get available roles to find webshop role
+        role_service = RolesService(config)
+        roles = role_service.get_roles(limit=100)
+
+        # Find webshop role (ID 5802 or by name)
+        webshop_role_id = None
+        for role in roles.data:
+            role_name = role.name.get('en-US', '') if isinstance(role.name, dict) else str(role.name)
+            if 'webshop' in role_name.lower():
+                webshop_role_id = role.id
+                break
+
+        user_service = ApplicationUsersService(config)
+        role_assign_service = ApplicationUsersRolesService(config)
+
+        # Create Webshop User if enabled
+        if enable_webshop:
+            # Check if webshop user already exists
+            if settings.webshop_user_id:
+                results["webshop"] = {
+                    "status": "exists",
+                    "user_id": settings.webshop_user_id
+                }
+            else:
+                try:
+                    # Create unique name with site identifier
+                    site_name = frappe.local.site.replace('.', '_')
+                    webshop_user = ApplicationUserCreate(
+                        name=f"webshop_{site_name}",
+                        primary_account=account_id
+                    )
+
+                    created_user = user_service.post_application_users(webshop_user)
+
+                    # Assign webshop role at Space level if found
+                    if webshop_role_id:
+                        role_assign_service.post_application_users_user_id_space_roles(
+                            user_id=created_user.id,
+                            role_id=webshop_role_id,
+                            space=space_id
+                        )
+
+                    # Save credentials to settings
+                    settings.webshop_user_id = created_user.id
+                    settings.webshop_authentication_key = created_user.mac_key
+
+                    results["webshop"] = {
+                        "status": "created",
+                        "user_id": created_user.id,
+                        "name": created_user.name,
+                        "role_assigned": webshop_role_id is not None
+                    }
+                except Exception as e:
+                    results["webshop"] = {
+                        "status": "error",
+                        "error": str(e)
+                    }
+                    results["success"] = False
+
+        # Create POS User if enabled
+        if enable_pos_terminal:
+            # Check if POS user already exists
+            if settings.pos_user_id:
+                results["pos"] = {
+                    "status": "exists",
+                    "user_id": settings.pos_user_id
+                }
+            else:
+                try:
+                    site_name = frappe.local.site.replace('.', '_')
+                    pos_user = ApplicationUserCreate(
+                        name=f"pos_{site_name}",
+                        primary_account=account_id
+                    )
+
+                    created_user = user_service.post_application_users(pos_user)
+
+                    # For POS, we might want Account Admin at Space level
+                    # or a specific POS role if available
+                    # Using webshop role for now if available
+                    if webshop_role_id:
+                        role_assign_service.post_application_users_user_id_space_roles(
+                            user_id=created_user.id,
+                            role_id=webshop_role_id,
+                            space=space_id
+                        )
+
+                    # Save credentials to settings
+                    settings.pos_user_id = created_user.id
+                    settings.pos_authentication_key = created_user.mac_key
+
+                    results["pos"] = {
+                        "status": "created",
+                        "user_id": created_user.id,
+                        "name": created_user.name,
+                        "role_assigned": webshop_role_id is not None
+                    }
+                except Exception as e:
+                    results["pos"] = {
+                        "status": "error",
+                        "error": str(e)
+                    }
+                    results["success"] = False
+
+        # Save all changes to settings
+        settings.save(ignore_permissions=True)
+        frappe.db.commit()
+
+        return results
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }

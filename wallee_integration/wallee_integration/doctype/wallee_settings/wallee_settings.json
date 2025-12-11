@@ -12,14 +12,19 @@
   "column_break_1",
   "space_id",
   "api_host",
+  "account_id",
   "section_webshop",
   "enable_webshop",
+  "webshop_user_id",
+  "webshop_authentication_key",
   "success_url",
   "failed_url",
   "column_break_webshop",
   "default_payment_method",
   "section_pos",
   "enable_pos_terminal",
+  "pos_user_id",
+  "pos_authentication_key",
   "default_terminal",
   "column_break_pos",
   "auto_capture",
@@ -74,6 +79,13 @@
    "description": "Wallee API endpoint URL"
   },
   {
+   "fieldname": "account_id",
+   "fieldtype": "Int",
+   "label": "Account ID",
+   "read_only": 1,
+   "description": "Wallee Account ID (auto-detected)"
+  },
+  {
    "fieldname": "section_webshop",
    "fieldtype": "Section Break",
    "label": "Webshop Settings"
@@ -83,6 +95,22 @@
    "fieldname": "enable_webshop",
    "fieldtype": "Check",
    "label": "Enable Webshop Payments"
+  },
+  {
+   "fieldname": "webshop_user_id",
+   "fieldtype": "Int",
+   "label": "Webshop User ID",
+   "depends_on": "eval:doc.enable_webshop",
+   "read_only": 1,
+   "description": "Dedicated Application User for webshop transactions (auto-created)"
+  },
+  {
+   "fieldname": "webshop_authentication_key",
+   "fieldtype": "Password",
+   "label": "Webshop Authentication Key",
+   "depends_on": "eval:doc.enable_webshop",
+   "read_only": 1,
+   "description": "Authentication key for webshop user"
   },
   {
    "fieldname": "success_url",
@@ -116,6 +144,22 @@
    "fieldname": "enable_pos_terminal",
    "fieldtype": "Check",
    "label": "Enable POS Terminal"
+  },
+  {
+   "fieldname": "pos_user_id",
+   "fieldtype": "Int",
+   "label": "POS User ID",
+   "depends_on": "eval:doc.enable_pos_terminal",
+   "read_only": 1,
+   "description": "Dedicated Application User for POS terminal transactions (auto-created)"
+  },
+  {
+   "fieldname": "pos_authentication_key",
+   "fieldtype": "Password",
+   "label": "POS Authentication Key",
+   "depends_on": "eval:doc.enable_pos_terminal",
+   "read_only": 1,
+   "description": "Authentication key for POS user"
   },
   {
    "fieldname": "default_terminal",

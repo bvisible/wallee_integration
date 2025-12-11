@@ -697,7 +697,7 @@ class WalleeSetupWizard {
 		$btn.prop('disabled', true).text(__('Setting up...'));
 
 		try {
-			// Save final settings
+			// Save final settings (admin credentials)
 			await this.save_credentials();
 
 			// Save feature flags
@@ -709,8 +709,36 @@ class WalleeSetupWizard {
 				}
 			});
 
-			// Setup webshop if enabled
+			// Create dedicated Application Users for Webshop/POS (with restricted roles)
+			let usersCreated = { webshop: null, pos: null };
+			if (this.wizardData.enable_webshop || this.wizardData.enable_pos_terminal) {
+				$btn.text(__('Creating dedicated users...'));
+
+				const userResult = await frappe.call({
+					method: 'wallee_integration.wallee_integration.page.wallee_setup_wizard.wallee_setup_wizard.create_dedicated_users',
+					args: {
+						enable_webshop: this.wizardData.enable_webshop,
+						enable_pos_terminal: this.wizardData.enable_pos_terminal
+					}
+				});
+
+				if (userResult.message) {
+					usersCreated = userResult.message;
+
+					if (!userResult.message.success) {
+						frappe.msgprint({
+							title: __('User Creation Warning'),
+							message: userResult.message.error || __('Could not create dedicated users. The admin user will be used instead.'),
+							indicator: 'orange'
+						});
+					}
+				}
+			}
+
+			// Setup webshop Payment Gateway if enabled
 			if (this.wizardData.enable_webshop) {
+				$btn.text(__('Configuring webshop...'));
+
 				const result = await frappe.call({
 					method: 'wallee_integration.wallee_integration.page.wallee_setup_wizard.wallee_setup_wizard.setup_webshop',
 					args: {
@@ -728,10 +756,22 @@ class WalleeSetupWizard {
 				}
 			}
 
+			// Build success message with details
+			let successDetails = __('Wallee integration has been configured successfully.');
+
+			if (usersCreated.webshop && usersCreated.webshop.status === 'created') {
+				successDetails += '<br><br><b>' + __('Webshop User') + ':</b> ' + usersCreated.webshop.name + ' (ID: ' + usersCreated.webshop.user_id + ')';
+			}
+			if (usersCreated.pos && usersCreated.pos.status === 'created') {
+				successDetails += '<br><b>' + __('POS User') + ':</b> ' + usersCreated.pos.name + ' (ID: ' + usersCreated.pos.user_id + ')';
+			}
+
+			successDetails += '<br><br>' + __('You can now accept payments.');
+
 			// Success!
 			frappe.msgprint({
 				title: __('Setup Complete!'),
-				message: __('Wallee integration has been configured successfully. You can now accept payments.'),
+				message: successDetails,
 				indicator: 'green',
 				primary_action: {
 					label: __('Go to Wallee Settings'),
