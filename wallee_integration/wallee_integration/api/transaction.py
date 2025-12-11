@@ -26,11 +26,12 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
             - success_url: URL to redirect on success
             - failed_url: URL to redirect on failure
             - auto_confirm: Auto confirm transaction (default True)
+            - billing_address: dict with given_name, family_name, email_address, street, city, postcode, country
 
     Returns:
         dict: {transaction_id, payment_url, state}
     """
-    from wallee import TransactionsService, LineItemCreate, TransactionCreate, LineItemType
+    from wallee import TransactionsService, LineItemCreate, TransactionCreate, LineItemType, AddressCreate
 
     config = get_wallee_client()
     space_id = get_space_id()
@@ -73,6 +74,20 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
     else:
         frappe.throw(_("Either amount or line_items must be provided"))
 
+    # Build billing address if provided
+    wallee_billing_address = None
+    billing_addr = kwargs.get("billing_address")
+    if billing_addr:
+        wallee_billing_address = AddressCreate(
+            given_name=billing_addr.get("given_name"),
+            family_name=billing_addr.get("family_name"),
+            email_address=billing_addr.get("email_address"),
+            street=billing_addr.get("street"),
+            city=billing_addr.get("city"),
+            postcode=billing_addr.get("postcode"),
+            country=billing_addr.get("country")
+        )
+
     # Create transaction
     transaction_create = TransactionCreate(
         line_items=wallee_line_items,
@@ -82,7 +97,8 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
         customer_id=kwargs.get("customer_id"),
         customer_email_address=kwargs.get("customer_email"),
         success_url=kwargs.get("success_url"),
-        failed_url=kwargs.get("failed_url")
+        failed_url=kwargs.get("failed_url"),
+        billing_address=wallee_billing_address
     )
 
     try:
