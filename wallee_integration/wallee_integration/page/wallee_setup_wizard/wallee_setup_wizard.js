@@ -78,19 +78,19 @@ class WalleeSetupWizard {
 							<ol>
 								<li>${__('Go to')} <a href="https://app-wallee.com" target="_blank">app-wallee.com</a> ${__('and log in to your account')}</li>
 								<li>${__('Click on')} <strong>Account</strong> ${__('in the left sidebar')}</li>
-								<li>${__('Look at the URL in your browser - it should look like:')} <code>https://app-wallee.com/a/<strong>84762</strong>/account/dashboard</code></li>
+								<li>${__('Look at the URL in your browser - it should look like:')} <code>https://app-wallee.com/a/<strong>12345</strong>/account/dashboard</code></li>
 								<li>${__('The number after')} <code>/a/</code> ${__('is your')} <strong>${__('Account ID')}</strong></li>
 							</ol>
 						</div>
 
 						<div class="wallee-screenshot">
 							<img src="/assets/wallee_integration/images/wallee_account_id_guide.png" alt="Wallee Account URL">
-							<div class="wallee-screenshot-caption">${__('Example: Account ID is 84762 in the URL')}</div>
+							<div class="wallee-screenshot-caption">${__('Example: Account ID is 12345 in the URL')}</div>
 						</div>
 
 						<div class="wallee-form-group">
 							<label>${__('Account ID')} <span class="required">*</span></label>
-							<input type="text" id="account_id" placeholder="84762" class="account-id-input">
+							<input type="text" id="account_id" placeholder="12345" class="account-id-input">
 							<div class="help-text">${__('This is used to create Application Users. The Space ID is required for API calls.')}</div>
 						</div>
 					</div>
@@ -109,14 +109,14 @@ class WalleeSetupWizard {
 							<ol>
 								<li>${__('In Wallee, click on')} <strong>Space</strong> ${__('in the left sidebar')}</li>
 								<li>${__('Select the Space you want to use for payments')}</li>
-								<li>${__('Look at the URL - it should look like:')} <code>https://app-wallee.com/s/<strong>80320</strong>/space/current/view</code></li>
+								<li>${__('Look at the URL - it should look like:')} <code>https://app-wallee.com/s/<strong>98765</strong>/space/current/view</code></li>
 								<li>${__('The number after')} <code>/s/</code> ${__('is your')} <strong>${__('Space ID')}</strong></li>
 							</ol>
 						</div>
 
 						<div class="wallee-screenshot">
 							<img src="/assets/wallee_integration/images/wallee_space_id_guide.png" alt="Wallee Space URL">
-							<div class="wallee-screenshot-caption">${__('Example: Space ID is 80320 in the URL')}</div>
+							<div class="wallee-screenshot-caption">${__('Example: Space ID is 98765 in the URL')}</div>
 						</div>
 
 						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd);">
@@ -128,7 +128,7 @@ class WalleeSetupWizard {
 
 						<div class="wallee-form-group">
 							<label>${__('Space ID')} <span class="required">*</span></label>
-							<input type="text" id="space_id" placeholder="80320" class="space-id-input">
+							<input type="text" id="space_id" placeholder="98765" class="space-id-input">
 							<div class="help-text">${__('The ID of the Space where transactions will be processed')}</div>
 						</div>
 					</div>
@@ -168,7 +168,7 @@ class WalleeSetupWizard {
 
 						<div class="wallee-form-group">
 							<label>${__('User ID')} <span class="required">*</span></label>
-							<input type="text" id="user_id" placeholder="153739" class="user-id-input">
+							<input type="text" id="user_id" placeholder="67890" class="user-id-input">
 							<div class="help-text">${__('The ID of your Application User (shown in the user list)')}</div>
 						</div>
 
