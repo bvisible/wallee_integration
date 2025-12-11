@@ -12,7 +12,7 @@ class WalleeSetupWizard {
 		});
 
 		this.currentStep = 1;
-		this.totalSteps = 4;
+		this.totalSteps = 5;
 		this.wizardData = {
 			account_id: '',
 			user_id: '',
@@ -48,19 +48,23 @@ class WalleeSetupWizard {
 					<div class="wallee-progress-bar">
 						<div class="wallee-progress-step active" data-step="1">
 							<div class="wallee-step-circle">1</div>
-							<div class="wallee-step-label">${__('Wallee Account')}</div>
+							<div class="wallee-step-label">${__('Account')}</div>
 						</div>
 						<div class="wallee-progress-step" data-step="2">
 							<div class="wallee-step-circle">2</div>
-							<div class="wallee-step-label">${__('Space Selection')}</div>
+							<div class="wallee-step-label">${__('Space')}</div>
 						</div>
 						<div class="wallee-progress-step" data-step="3">
 							<div class="wallee-step-circle">3</div>
-							<div class="wallee-step-label">${__('Application User')}</div>
+							<div class="wallee-step-label">${__('App User')}</div>
 						</div>
 						<div class="wallee-progress-step" data-step="4">
 							<div class="wallee-step-circle">4</div>
-							<div class="wallee-step-label">${__('Test & Finish')}</div>
+							<div class="wallee-step-label">${__('Roles')}</div>
+						</div>
+						<div class="wallee-progress-step" data-step="5">
+							<div class="wallee-step-circle">5</div>
+							<div class="wallee-step-label">${__('Test')}</div>
 						</div>
 					</div>
 				</div>
@@ -150,38 +154,94 @@ class WalleeSetupWizard {
 								</li>
 								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to add a new Application User')}</li>
 								<li>${__('Give it a name like')} <code>neoffice</code></li>
-								<li>${__('After creation, click on the user and go to')} <strong>${__('Authentication')}</strong></li>
-								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to generate an Authentication Key')}</li>
-								<li><strong>${__('Important:')}</strong> ${__('Copy the key immediately - it will only be shown once!')}</li>
+								<li>${__('After creation, click on the user to view its details')}</li>
+								<li>${__('Note the')} <strong>${__('User ID')}</strong> ${__('shown at the top (e.g. #67890)')}</li>
 							</ol>
 						</div>
 
-						<div class="wallee-instructions" style="background: var(--yellow-50, #fefce8); border-color: var(--yellow-300, #fde047);">
-							<h4 style="color: var(--yellow-700, #a16207);">${__('Assign Required Permissions')}</h4>
+						<div class="wallee-screenshot">
+							<img src="/assets/wallee_integration/images/wallee_page_user_app.png" alt="Application User Page">
+							<div class="wallee-screenshot-caption">${__('The User ID is shown next to the user name')}</div>
+						</div>
+
+						<div class="wallee-instructions" style="background: var(--green-50, #f0fdf4); border-color: var(--green-300, #86efac);">
+							<h4 style="color: var(--green-700, #15803d);">${__('Generate Authentication Key')}</h4>
 							<ol>
-								<li>${__('Still on the Application User page, find the')} <strong>${__('Roles')}</strong> ${__('section')}</li>
-								<li>${__('Click')} <strong>${__('Manage')}</strong></li>
-								<li>${__('Add the role')} <code>Account Admin (ID: 2)</code></li>
-								<li>${__('This role allows creating transactions and managing terminals')}</li>
+								<li>${__('On the Application User page, click')} <strong>${__('Generate a new key')}</strong></li>
+								<li><strong>${__('Important:')}</strong> ${__('Copy the key immediately - it will only be shown once!')}</li>
 							</ol>
 						</div>
 
 						<div class="wallee-form-group">
 							<label>${__('User ID')} <span class="required">*</span></label>
 							<input type="text" id="user_id" placeholder="67890" class="user-id-input">
-							<div class="help-text">${__('The ID of your Application User (shown in the user list)')}</div>
+							<div class="help-text">${__('The ID of your Application User (shown next to the name)')}</div>
 						</div>
 
 						<div class="wallee-form-group">
 							<label>${__('Authentication Key')} <span class="required">*</span></label>
 							<input type="password" id="authentication_key" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="auth-key-input">
-							<div class="help-text">${__('The secret key generated in the Authentication section')}</div>
+							<div class="help-text">${__('The secret key generated - copy it before closing the dialog!')}</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Step 4: Test & Finish -->
+				<!-- Step 4: Assign Roles -->
 				<div class="wallee-step-content" data-step="4">
+					<div class="wallee-card">
+						<div class="wallee-card-header">
+							<span class="icon">🔐</span>
+							<h3>${__('Assign Permissions')}</h3>
+						</div>
+
+						<div class="wallee-instructions">
+							<h4>${__('Assign the Account Admin Role')}</h4>
+							<ol>
+								<li>${__('On the Application User page, find the')} <strong>${__('Roles')}</strong> ${__('section on the right')}</li>
+								<li>${__('Click')} <strong>${__('Manage')}</strong></li>
+							</ol>
+						</div>
+
+						<div class="wallee-screenshot">
+							<img src="/assets/wallee_integration/images/wallee_add_role.png" alt="Roles Section">
+							<div class="wallee-screenshot-caption">${__('Click on "Rôles de l\'Account" to add a role')}</div>
+						</div>
+
+						<div class="wallee-instructions">
+							<h4>${__('Add the Role')}</h4>
+							<ol>
+								<li>${__('Click the')} <strong>+</strong> ${__('button next to "Rôles de l\'Account"')}</li>
+								<li>${__('Select your account in "Contexte"')}</li>
+								<li>${__('In "Rôles", select')} <code>Account Admin (ID: 2)</code></li>
+								<li>${__('Click')} <strong>${__('Assign roles')}</strong></li>
+							</ol>
+						</div>
+
+						<div class="wallee-screenshot">
+							<img src="/assets/wallee_integration/images/wallee_dialog_add_role.png" alt="Add Role Dialog">
+							<div class="wallee-screenshot-caption">${__('Select Account Admin (ID: 2) in the Roles field')}</div>
+						</div>
+
+						<div class="wallee-instructions" style="background: var(--yellow-50, #fefce8); border-color: var(--yellow-300, #fde047);">
+							<h4 style="color: var(--yellow-700, #a16207);">${__('Important: Save the Roles')}</h4>
+							<ol>
+								<li>${__('Click')} <strong>${__('Save roles')}</strong> ${__('(blue button at the top)')}</li>
+								<li>${__('You will be asked to re-enter your password to confirm')}</li>
+								<li>${__('The Account Admin role gives full access to all Spaces in the account')}</li>
+							</ol>
+						</div>
+
+						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd);">
+							<h4 style="color: var(--blue-700, #1d4ed8);">${__('Note')}</h4>
+							<p style="margin: 0; font-size: 13px; color: var(--text-color);">
+								${__('You only need to add the role at the Account level. This automatically grants permissions to all Spaces and Subaccounts.')}
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Step 5: Test & Finish -->
+				<div class="wallee-step-content" data-step="5">
 					<div class="wallee-card">
 						<div class="wallee-card-header">
 							<span class="icon">✅</span>
@@ -401,6 +461,10 @@ class WalleeSetupWizard {
 				return true;
 
 			case 4:
+				// Role assignment step - just informational
+				return true;
+
+			case 5:
 				return true;
 		}
 		return true;
@@ -422,11 +486,13 @@ class WalleeSetupWizard {
 				if (authKey) {
 					this.wizardData.authentication_key = authKey;
 				}
-				// Update Application User link for step 3
-				this.update_app_user_link();
 				break;
 
 			case 4:
+				// Role step - no data to collect
+				break;
+
+			case 5:
 				this.wizardData.enable_webshop = this.$content.find('#enable_webshop').prop('checked');
 				this.wizardData.enable_pos_terminal = this.$content.find('#enable_pos_terminal').prop('checked');
 				this.wizardData.currency = this.$content.find('#currency').val();
@@ -451,8 +517,8 @@ class WalleeSetupWizard {
 				this.update_app_user_link();
 			}
 
-			// Special handling for step 4
-			if (this.currentStep === 4) {
+			// Special handling for step 5
+			if (this.currentStep === 5) {
 				this.update_summary();
 				this.save_credentials();
 			}
@@ -588,24 +654,21 @@ class WalleeSetupWizard {
 			helpText = `
 				<p style="margin-top: 12px; font-size: 12px;">
 					<strong>${__('To fix this:')}</strong><br>
-					1. ${__('Go to Wallee → Account → Users → Application Users')}<br>
-					2. ${__('Click on your user, then "Manage" in the Roles section')}<br>
-					3. ${__('Add the role "Account Admin (ID: 2)"')}<br>
-					4. ${__('Save and try again')}
+					${__('Go back to Step 4 and make sure you assigned the "Account Admin (ID: 2)" role and saved it with your password.')}
 				</p>
 			`;
 		} else if (data.error_type === 'space') {
 			helpText = `
 				<p style="margin-top: 12px; font-size: 12px;">
 					<strong>${__('To fix this:')}</strong><br>
-					${__('Verify the Space ID is correct. Go to Wallee → Space and check the URL for /s/{SPACE_ID}/')}
+					${__('Go back to Step 2 and verify the Space ID is correct.')}
 				</p>
 			`;
 		} else if (data.error_type === 'auth') {
 			helpText = `
 				<p style="margin-top: 12px; font-size: 12px;">
 					<strong>${__('To fix this:')}</strong><br>
-					${__('Check your User ID and Authentication Key. You may need to generate a new key.')}
+					${__('Go back to Step 3 and check your User ID and Authentication Key.')}
 				</p>
 			`;
 		}
@@ -628,7 +691,7 @@ class WalleeSetupWizard {
 	}
 
 	async finish_setup() {
-		this.collect_step_data(4);
+		this.collect_step_data(5);
 
 		const $btn = this.$content.find('#finish-btn');
 		$btn.prop('disabled', true).text(__('Setting up...'));
