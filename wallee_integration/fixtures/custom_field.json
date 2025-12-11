@@ -1,0 +1,12 @@
+[
+    {
+        "doctype": "Custom Field",
+        "dt": "Payment Gateway Account",
+        "fieldname": "wallee_payment_method_id",
+        "fieldtype": "Int",
+        "label": "Wallee Payment Method ID",
+        "insert_after": "payment_gateway",
+        "description": "Wallee Payment Method Configuration ID (e.g., 440350 for Credit Card, specific ID for TWINT). Leave empty to use the first available method.",
+        "depends_on": "eval:doc.payment_gateway && doc.payment_gateway.includes('Wallee')"
+    }
+]

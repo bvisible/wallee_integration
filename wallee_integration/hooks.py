@@ -90,6 +90,15 @@ page_js = {
 # before_install = "wallee_integration.install.before_install"
 after_install = "wallee_integration.install.after_install"
 
+# Fixtures
+# --------
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [["module", "=", "Wallee Integration"]]
+    }
+]
+
 # Uninstallation
 # ------------
 
