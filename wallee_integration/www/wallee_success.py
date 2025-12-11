@@ -65,13 +65,31 @@ def get_context(context):
             context.transaction = frappe.get_doc("Wallee Transaction", wallee_tx_name)
             debug_log(f"TX status BEFORE sync={context.transaction.status}")
 
-            # Sync status from Wallee API
-            try:
-                context.transaction.sync_status()
-                context.transaction.reload()
-                debug_log(f"TX status AFTER sync={context.transaction.status}")
-            except Exception as e:
-                debug_log(f"Sync error: {str(e)}")
+            # Sync status from Wallee API with retry loop
+            # Wallee may take a few seconds to confirm the payment after redirect
+            import time
+            max_retries = 5
+            retry_delay = 2  # seconds
+
+            for attempt in range(max_retries):
+                try:
+                    context.transaction.sync_status()
+                    context.transaction.reload()
+                    debug_log(f"TX status AFTER sync (attempt {attempt + 1})={context.transaction.status}")
+
+                    # If status is final (success or failure), break out of loop
+                    if context.transaction.status in ["Completed", "Fulfill", "Authorized", "Failed", "Decline", "Voided"]:
+                        break
+
+                    # Status still pending, wait and retry
+                    if attempt < max_retries - 1:
+                        debug_log(f"Status still pending, waiting {retry_delay}s before retry...")
+                        time.sleep(retry_delay)
+
+                except Exception as e:
+                    debug_log(f"Sync error (attempt {attempt + 1}): {str(e)}")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
 
             # Check if payment is successful
             if context.transaction.status in ["Completed", "Fulfill", "Authorized"]:
