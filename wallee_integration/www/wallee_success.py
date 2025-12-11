@@ -23,6 +23,7 @@ def get_context(context):
     # Debug log - use frappe.log_error which always logs to Error Log table
     def debug_log(msg):
         frappe.log_error(message=msg, title="Wallee Debug")
+        frappe.db.commit()  # Commit immediately so log is saved even if exception occurs
 
     debug_log(f"START - payment_request={payment_request_name}")
 
@@ -73,7 +74,9 @@ def get_context(context):
 
             for attempt in range(max_retries):
                 try:
+                    debug_log(f"Calling sync_status (attempt {attempt + 1})...")
                     context.transaction.sync_status()
+                    debug_log(f"sync_status done, reloading...")
                     context.transaction.reload()
                     debug_log(f"TX status AFTER sync (attempt {attempt + 1})={context.transaction.status}")
 
