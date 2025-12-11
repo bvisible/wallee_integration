@@ -77,9 +77,9 @@ class WalleeSetupWizard {
 							<h4>${__('Getting Started')}</h4>
 							<ol>
 								<li>${__('Go to')} <a href="https://app-wallee.com" target="_blank">app-wallee.com</a> ${__('and log in to your account')}</li>
-								<li>${__('Click on')} <strong>Account</strong> ${__('in the left sidebar')}</li>
-								<li>${__('Look at the URL in your browser - it should look like:')} <code>https://app-wallee.com/a/<strong>12345</strong>/account/dashboard</code></li>
-								<li>${__('The number after')} <code>/a/</code> ${__('is your')} <strong>${__('Account ID')}</strong></li>
+								<li>${__('After login, go to')} <a href="https://app-wallee.com/account/select" target="_blank">app-wallee.com/account/select</a></li>
+								<li>${__('You will see your Account ID displayed next to each account name')}</li>
+								<li>${__('Or look at the URL when viewing an account:')} <code>https://app-wallee.com/a/<strong>12345</strong>/...</code></li>
 							</ol>
 						</div>
 
