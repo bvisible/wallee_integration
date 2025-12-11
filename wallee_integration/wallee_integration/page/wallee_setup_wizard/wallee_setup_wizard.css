@@ -1,0 +1,532 @@
+/* Wallee Setup Wizard Styles */
+
+.wallee-wizard-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.wallee-wizard-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.wallee-wizard-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.wallee-wizard-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* Progress Bar */
+.wallee-progress-container {
+    margin-bottom: 40px;
+}
+
+.wallee-progress-bar {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    padding: 0 10px;
+}
+
+.wallee-progress-bar::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50px;
+    right: 50px;
+    height: 3px;
+    background: var(--gray-300);
+    z-index: 0;
+}
+
+.wallee-progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+}
+
+.wallee-step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gray-300);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.wallee-step-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    max-width: 100px;
+}
+
+.wallee-progress-step.active .wallee-step-circle {
+    background: var(--primary);
+    color: white;
+}
+
+.wallee-progress-step.active .wallee-step-label {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.wallee-progress-step.completed .wallee-step-circle {
+    background: var(--green-500);
+    color: white;
+}
+
+.wallee-progress-step.completed .wallee-step-label {
+    color: var(--green-600);
+}
+
+/* Step Content */
+.wallee-step-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.wallee-step-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards */
+.wallee-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.wallee-card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.wallee-card-header .icon {
+    font-size: 24px;
+    margin-right: 12px;
+    color: var(--primary);
+}
+
+.wallee-card-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* Instructions */
+.wallee-instructions {
+    background: var(--bg-light-blue);
+    border: 1px solid var(--blue-300);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.wallee-instructions h4 {
+    color: var(--blue-600);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.wallee-instructions h4::before {
+    content: '\f05a';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-right: 8px;
+}
+
+.wallee-instructions ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-color);
+}
+
+.wallee-instructions li {
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.wallee-instructions code {
+    background: var(--blue-100);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--blue-700);
+}
+
+.wallee-instructions a {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+/* Screenshot Preview */
+.wallee-screenshot {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.wallee-screenshot img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.wallee-screenshot-caption {
+    background: var(--bg-color);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Form Fields */
+.wallee-form-group {
+    margin-bottom: 20px;
+}
+
+.wallee-form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--text-color);
+}
+
+.wallee-form-group label .required {
+    color: var(--red-500);
+}
+
+.wallee-form-group input,
+.wallee-form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+}
+
+.wallee-form-group input:focus,
+.wallee-form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.wallee-form-group .help-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* URL Input with Copy Button */
+.wallee-url-input {
+    display: flex;
+    gap: 8px;
+}
+
+.wallee-url-input input {
+    flex: 1;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.wallee-url-input .btn-copy {
+    padding: 10px 16px;
+    white-space: nowrap;
+}
+
+/* Buttons */
+.wallee-wizard-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.wallee-wizard-actions .btn {
+    min-width: 120px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.wallee-wizard-actions .btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+}
+
+.wallee-wizard-actions .btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.wallee-wizard-actions .btn-secondary {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.wallee-wizard-actions .btn-secondary:hover {
+    background: var(--gray-100);
+}
+
+/* Test Connection Button */
+.wallee-test-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--green-500);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wallee-test-btn:hover {
+    background: var(--green-600);
+}
+
+.wallee-test-btn:disabled {
+    background: var(--gray-400);
+    cursor: not-allowed;
+}
+
+.wallee-test-btn .spinner {
+    display: none;
+}
+
+.wallee-test-btn.loading .spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+.wallee-test-btn.loading .icon {
+    display: none;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Status Messages */
+.wallee-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.wallee-status.success {
+    background: var(--green-50);
+    border: 1px solid var(--green-300);
+    color: var(--green-700);
+}
+
+.wallee-status.error {
+    background: var(--red-50);
+    border: 1px solid var(--red-300);
+    color: var(--red-700);
+}
+
+.wallee-status.warning {
+    background: var(--yellow-50);
+    border: 1px solid var(--yellow-300);
+    color: var(--yellow-700);
+}
+
+.wallee-status .status-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.wallee-status .status-content h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.wallee-status .status-content p {
+    margin: 0;
+    font-size: 13px;
+}
+
+/* Feature Checkboxes */
+.wallee-feature-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.wallee-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wallee-feature-item:hover {
+    border-color: var(--primary);
+}
+
+.wallee-feature-item.selected {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.wallee-feature-item input[type="checkbox"] {
+    margin-top: 2px;
+}
+
+.wallee-feature-item .feature-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.wallee-feature-item .feature-info p {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Summary Section */
+.wallee-summary {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.wallee-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.wallee-summary-row:last-child {
+    border-bottom: none;
+}
+
+.wallee-summary-row .label {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.wallee-summary-row .value {
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.wallee-summary-row .value.success {
+    color: var(--green-600);
+}
+
+.wallee-summary-row .value.pending {
+    color: var(--yellow-600);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wallee-wizard-container {
+        padding: 10px;
+    }
+
+    .wallee-progress-bar::before {
+        display: none;
+    }
+
+    .wallee-step-label {
+        display: none;
+    }
+
+    .wallee-wizard-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .wallee-wizard-actions .btn {
+        width: 100%;
+    }
+
+    .wallee-feature-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .wallee-instructions {
+    background: var(--gray-800);
+    border-color: var(--gray-700);
+}
+
+[data-theme="dark"] .wallee-instructions h4 {
+    color: var(--blue-400);
+}
+
+[data-theme="dark"] .wallee-instructions code {
+    background: var(--gray-700);
+    color: var(--blue-300);
+}
+
+[data-theme="dark"] .wallee-screenshot {
+    border-color: var(--gray-700);
+}
+
+[data-theme="dark"] .wallee-status.success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: var(--green-700);
+}
+
+[data-theme="dark"] .wallee-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--red-700);
+}

@@ -3,14 +3,28 @@
 
 frappe.ui.form.on('Wallee Settings', {
     refresh: function(frm) {
-        // Check if credentials are missing - show setup wizard
-        if (!frm.doc.space_id || frm.doc.space_id === 0) {
-            show_setup_wizard(frm, 'space_id');
-            return;
-        }
+        // Check if credentials are missing - redirect to setup wizard
+        if (!frm.doc.space_id || frm.doc.space_id === 0 ||
+            !frm.doc.user_id || frm.doc.user_id === 0 ||
+            !frm.doc.authentication_key) {
 
-        if (!frm.doc.user_id || frm.doc.user_id === 0 || !frm.doc.authentication_key) {
-            show_setup_wizard(frm, 'credentials');
+            frm.set_intro(`
+                <div class="alert alert-warning" style="margin-bottom: 0;">
+                    <strong>${__('Configuration Required')}</strong><br>
+                    ${__('Wallee Integration needs to be configured before use.')}
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-primary btn-sm" onclick="frappe.set_route('wallee-setup-wizard')">
+                            ${__('Open Setup Wizard')} →
+                        </button>
+                    </div>
+                </div>
+            `, 'yellow');
+
+            // Add wizard button
+            frm.add_custom_button(__('Setup Wizard'), function() {
+                frappe.set_route('wallee-setup-wizard');
+            }).addClass('btn-primary');
+
             return;
         }
 
@@ -58,207 +72,7 @@ frappe.ui.form.on('Wallee Settings', {
     }
 });
 
-function show_setup_wizard(frm, step) {
-    let d;
-
-    if (step === 'space_id') {
-        d = new frappe.ui.Dialog({
-            title: __('Wallee Setup - Step 1: Space ID'),
-            size: 'large',
-            static: true, // Cannot close by clicking outside
-            fields: [
-                {
-                    fieldtype: 'HTML',
-                    fieldname: 'intro_html',
-                    options: `
-                        <div class="wallee-setup-wizard">
-                            <div class="alert alert-warning">
-                                <strong>${__('Configuration Required')}</strong><br>
-                                ${__('Wallee Integration needs to be configured before use.')}
-                            </div>
-
-                            <h4>${__('Step 1: Get your Space ID')}</h4>
-
-                            <div class="step-instructions">
-                                <p><strong>${__('Option A: Create a new account')}</strong></p>
-                                <ol>
-                                    <li>${__('Go to')} <a href="https://app-wallee.com/user/signup" target="_blank">https://app-wallee.com/user/signup</a></li>
-                                    <li>${__('Create your account and follow the setup wizard')}</li>
-                                </ol>
-
-                                <p><strong>${__('Option B: Login to existing account')}</strong></p>
-                                <ol>
-                                    <li>${__('Go to')} <a href="https://app-wallee.com/user/login" target="_blank">https://app-wallee.com/user/login</a></li>
-                                    <li>${__('Login with your credentials')}</li>
-                                </ol>
-
-                                <hr>
-
-                                <p><strong>${__('Find your Space ID:')}</strong></p>
-                                <p>${__('Your Space ID is the number shown next to your company name (see screenshot below)')}</p>
-
-                                <div class="screenshot-container" style="text-align: center; margin: 20px 0; border: 1px solid #d1d8dd; padding: 10px; border-radius: 4px;">
-                                    <img src="/assets/wallee_integration/images/wallee_space_id_guide.png"
-                                         style="max-width: 100%; height: auto; border-radius: 4px;"
-                                         alt="Wallee Space ID Location">
-                                </div>
-
-                                <p class="text-muted">${__('The Space ID is typically a 5-digit number like')} <code>#12345</code></p>
-                            </div>
-                        </div>
-                    `
-                },
-                {
-                    fieldtype: 'Section Break'
-                },
-                {
-                    label: __('Enter your Space ID'),
-                    fieldname: 'space_id',
-                    fieldtype: 'Int',
-                    reqd: 1,
-                    description: __('Enter the number shown next to your company name in Wallee (e.g., 12345)')
-                }
-            ],
-            primary_action_label: __('Next Step →'),
-            primary_action: function(values) {
-                if (!values.space_id || values.space_id <= 0) {
-                    frappe.msgprint(__('Please enter a valid Space ID'));
-                    return;
-                }
-
-                // Save the space_id
-                frm.set_value('space_id', values.space_id);
-                frm.save().then(() => {
-                    d.hide();
-                    // Show next step
-                    show_setup_wizard(frm, 'credentials');
-                });
-            },
-            secondary_action_label: __('I need help'),
-            secondary_action: function() {
-                window.open('https://app-wallee.com/en/doc/getting-started', '_blank');
-            }
-        });
-
-        // Remove close button
-        d.$wrapper.find('.btn-modal-close').hide();
-        d.show();
-
-    } else if (step === 'credentials') {
-        const space_id = frm.doc.space_id;
-        // Account ID is used for user management, not space ID
-        const app_user_url = `https://app-wallee.com/a/${space_id}/user/application/list`;
-
-        d = new frappe.ui.Dialog({
-            title: __('Wallee Setup - Step 2: API Credentials'),
-            size: 'large',
-            static: true,
-            fields: [
-                {
-                    fieldtype: 'HTML',
-                    fieldname: 'intro_html',
-                    options: `
-                        <div class="wallee-setup-wizard">
-                            <div class="alert alert-info">
-                                <strong>✓ ${__('Space ID configured:')} ${space_id}</strong>
-                            </div>
-
-                            <h4>${__('Step 2: Create an Application User')}</h4>
-
-                            <div class="step-instructions">
-                                <p>${__('You need to create an Application User to allow ERPNext to communicate with Wallee.')}</p>
-
-                                <ol>
-                                    <li>
-                                        <strong>${__('Open Application Users page:')}</strong><br>
-                                        <a href="${app_user_url}" target="_blank" class="btn btn-xs btn-primary" style="margin: 5px 0;">
-                                            ${__('Open Application Users')} →
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <strong>${__('Click "Create Application User"')}</strong><br>
-                                        ${__('Give it a name like "Neoffice Integration"')}
-                                    </li>
-                                    <li>
-                                        <strong>${__('Copy the credentials:')}</strong><br>
-                                        <ul>
-                                            <li><strong>User ID:</strong> ${__('The numeric ID shown after creation')}</li>
-                                            <li><strong>Authentication Key:</strong> ${__('The long BASE64 key (shown only once!)')}</li>
-                                        </ul>
-                                    </li>
-                                </ol>
-
-                                <div class="alert alert-warning">
-                                    <strong>⚠️ ${__('Important:')}</strong>
-                                    ${__('The Authentication Key is only shown once when you create the Application User. Copy it immediately!')}
-                                </div>
-                            </div>
-                        </div>
-                    `
-                },
-                {
-                    fieldtype: 'Section Break',
-                    label: __('Enter your credentials')
-                },
-                {
-                    label: __('User ID'),
-                    fieldname: 'user_id',
-                    fieldtype: 'Int',
-                    reqd: 1,
-                    description: __('The numeric Application User ID')
-                },
-                {
-                    fieldtype: 'Column Break'
-                },
-                {
-                    label: __('Authentication Key'),
-                    fieldname: 'authentication_key',
-                    fieldtype: 'Password',
-                    reqd: 1,
-                    description: __('The BASE64 authentication key')
-                }
-            ],
-            primary_action_label: __('Save & Test Connection'),
-            primary_action: function(values) {
-                if (!values.user_id || values.user_id <= 0) {
-                    frappe.msgprint(__('Please enter a valid User ID'));
-                    return;
-                }
-                if (!values.authentication_key) {
-                    frappe.msgprint(__('Please enter the Authentication Key'));
-                    return;
-                }
-
-                // Save credentials
-                frm.set_value('user_id', values.user_id);
-                frm.set_value('authentication_key', values.authentication_key);
-                frm.set_value('enabled', 1);
-
-                frm.save().then(() => {
-                    d.hide();
-                    // Test connection
-                    frappe.show_alert({
-                        message: __('Credentials saved! Testing connection...'),
-                        indicator: 'blue'
-                    });
-
-                    setTimeout(() => {
-                        test_wallee_connection(frm);
-                    }, 500);
-                });
-            },
-            secondary_action_label: __('← Back'),
-            secondary_action: function() {
-                d.hide();
-                show_setup_wizard(frm, 'space_id');
-            }
-        });
-
-        // Remove close button
-        d.$wrapper.find('.btn-modal-close').hide();
-        d.show();
-    }
-}
+// Setup wizard moved to dedicated page: wallee-setup-wizard
 
 function update_application_user_link(frm) {
     // Update description with direct link when space_id changes
