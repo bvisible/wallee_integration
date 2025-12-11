@@ -188,12 +188,21 @@ def update_transaction_from_wallee(doc, tx):
     # Update line items
     _update_line_items(doc, tx)
 
+    # Helper to convert timezone-aware datetime to naive (MariaDB compatible)
+    def to_naive_datetime(dt):
+        if dt is None:
+            return None
+        if hasattr(dt, "replace") and hasattr(dt, "tzinfo") and dt.tzinfo is not None:
+            # Remove timezone info - convert to naive datetime
+            return dt.replace(tzinfo=None)
+        return dt
+
     # Update timestamps
     if new_status == "Authorized" and not doc.authorized_on:
         doc.authorized_on = now_datetime()
     elif new_status in ["Completed", "Fulfill"] and not doc.completed_on:
         completed_on = get_attr(tx, "completed_on")
-        doc.completed_on = completed_on or now_datetime()
+        doc.completed_on = to_naive_datetime(completed_on) or now_datetime()
     elif new_status == "Voided" and not doc.voided_on:
         doc.voided_on = now_datetime()
 
