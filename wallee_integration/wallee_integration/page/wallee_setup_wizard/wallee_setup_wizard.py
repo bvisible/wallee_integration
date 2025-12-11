@@ -217,3 +217,14 @@ def get_currencies():
         order_by="name"
     )
     return currencies
+
+
+@frappe.whitelist()
+def save_features(enable_webshop=False, enable_pos_terminal=False):
+    """Save feature flags"""
+    settings = frappe.get_single("Wallee Settings")
+    settings.enable_webshop = 1 if enable_webshop else 0
+    settings.enable_pos_terminal = 1 if enable_pos_terminal else 0
+    settings.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"success": True}

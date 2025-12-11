@@ -700,6 +700,15 @@ class WalleeSetupWizard {
 			// Save final settings
 			await this.save_credentials();
 
+			// Save feature flags
+			await frappe.call({
+				method: 'wallee_integration.wallee_integration.page.wallee_setup_wizard.wallee_setup_wizard.save_features',
+				args: {
+					enable_webshop: this.wizardData.enable_webshop,
+					enable_pos_terminal: this.wizardData.enable_pos_terminal
+				}
+			});
+
 			// Setup webshop if enabled
 			if (this.wizardData.enable_webshop) {
 				const result = await frappe.call({
