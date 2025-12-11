@@ -14,6 +14,7 @@ class WalleeSetupWizard {
 		this.currentStep = 1;
 		this.totalSteps = 4;
 		this.wizardData = {
+			account_id: '',
 			user_id: '',
 			authentication_key: '',
 			space_id: '',
@@ -51,11 +52,11 @@ class WalleeSetupWizard {
 						</div>
 						<div class="wallee-progress-step" data-step="2">
 							<div class="wallee-step-circle">2</div>
-							<div class="wallee-step-label">${__('Application User')}</div>
+							<div class="wallee-step-label">${__('Space Selection')}</div>
 						</div>
 						<div class="wallee-progress-step" data-step="3">
 							<div class="wallee-step-circle">3</div>
-							<div class="wallee-step-label">${__('Space Selection')}</div>
+							<div class="wallee-step-label">${__('Application User')}</div>
 						</div>
 						<div class="wallee-progress-step" data-step="4">
 							<div class="wallee-step-circle">4</div>
@@ -83,20 +84,58 @@ class WalleeSetupWizard {
 						</div>
 
 						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee-account-url.png" alt="Wallee Account URL" onerror="this.parentElement.style.display='none'">
+							<img src="/assets/wallee_integration/images/wallee_account_id_guide.png" alt="Wallee Account URL">
 							<div class="wallee-screenshot-caption">${__('Example: Account ID is 84762 in the URL')}</div>
 						</div>
 
 						<div class="wallee-form-group">
 							<label>${__('Account ID')} <span class="required">*</span></label>
 							<input type="text" id="account_id" placeholder="84762" class="account-id-input">
-							<div class="help-text">${__('This is used only for reference. The Space ID is required for API calls.')}</div>
+							<div class="help-text">${__('This is used to create Application Users. The Space ID is required for API calls.')}</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Step 2: Application User -->
+				<!-- Step 2: Space Selection -->
 				<div class="wallee-step-content" data-step="2">
+					<div class="wallee-card">
+						<div class="wallee-card-header">
+							<span class="icon">🌐</span>
+							<h3>${__('Select Your Space')}</h3>
+						</div>
+
+						<div class="wallee-instructions">
+							<h4>${__('Find Your Space ID')}</h4>
+							<ol>
+								<li>${__('In Wallee, click on')} <strong>Space</strong> ${__('in the left sidebar')}</li>
+								<li>${__('Select the Space you want to use for payments')}</li>
+								<li>${__('Look at the URL - it should look like:')} <code>https://app-wallee.com/s/<strong>80320</strong>/space/current/view</code></li>
+								<li>${__('The number after')} <code>/s/</code> ${__('is your')} <strong>${__('Space ID')}</strong></li>
+							</ol>
+						</div>
+
+						<div class="wallee-screenshot">
+							<img src="/assets/wallee_integration/images/wallee_space_id_guide.png" alt="Wallee Space URL">
+							<div class="wallee-screenshot-caption">${__('Example: Space ID is 80320 in the URL')}</div>
+						</div>
+
+						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd);">
+							<h4 style="color: var(--blue-700, #1d4ed8);">${__('What is a Space?')}</h4>
+							<p style="margin: 0; font-size: 13px; color: var(--text-color);">
+								${__('A Space is like a separate environment within your Wallee account. Each Space has its own transactions, payment methods, and configurations. Typically you have one Space per business or per country.')}
+							</p>
+						</div>
+
+						<div class="wallee-form-group">
+							<label>${__('Space ID')} <span class="required">*</span></label>
+							<input type="text" id="space_id" placeholder="80320" class="space-id-input">
+							<div class="help-text">${__('The ID of the Space where transactions will be processed')}</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Step 3: Application User -->
+				<div class="wallee-step-content" data-step="3">
 					<div class="wallee-card">
 						<div class="wallee-card-header">
 							<span class="icon">👤</span>
@@ -106,7 +145,9 @@ class WalleeSetupWizard {
 						<div class="wallee-instructions">
 							<h4>${__('Create an Application User for API Access')}</h4>
 							<ol>
-								<li>${__('In Wallee, go to')} <strong>Account → Users → Application Users</strong></li>
+								<li>${__('In Wallee, go to')} <strong>Account → Users → Application Users</strong>
+									<span id="app-user-link-container"></span>
+								</li>
 								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to add a new Application User')}</li>
 								<li>${__('Give it a name like')} <code>ERPNext Integration</code></li>
 								<li>${__('After creation, click on the user and go to')} <strong>${__('Authentication')}</strong></li>
@@ -115,8 +156,8 @@ class WalleeSetupWizard {
 							</ol>
 						</div>
 
-						<div class="wallee-instructions" style="background: var(--yellow-50); border-color: var(--yellow-300);">
-							<h4 style="color: var(--yellow-700);">${__('Assign Required Permissions')}</h4>
+						<div class="wallee-instructions" style="background: var(--yellow-50, #fefce8); border-color: var(--yellow-300, #fde047);">
+							<h4 style="color: var(--yellow-700, #a16207);">${__('Assign Required Permissions')}</h4>
 							<ol>
 								<li>${__('Still on the Application User page, find the')} <strong>${__('Roles')}</strong> ${__('section')}</li>
 								<li>${__('Click')} <strong>${__('Manage')}</strong></li>
@@ -135,44 +176,6 @@ class WalleeSetupWizard {
 							<label>${__('Authentication Key')} <span class="required">*</span></label>
 							<input type="password" id="authentication_key" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="auth-key-input">
 							<div class="help-text">${__('The secret key generated in the Authentication section')}</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Step 3: Space Selection -->
-				<div class="wallee-step-content" data-step="3">
-					<div class="wallee-card">
-						<div class="wallee-card-header">
-							<span class="icon">🌐</span>
-							<h3>${__('Select Your Space')}</h3>
-						</div>
-
-						<div class="wallee-instructions">
-							<h4>${__('Find Your Space ID')}</h4>
-							<ol>
-								<li>${__('In Wallee, click on')} <strong>Space</strong> ${__('in the left sidebar')}</li>
-								<li>${__('Select the Space you want to use for payments')}</li>
-								<li>${__('Look at the URL - it should look like:')} <code>https://app-wallee.com/s/<strong>80320</strong>/space/current/view</code></li>
-								<li>${__('The number after')} <code>/s/</code> ${__('is your')} <strong>${__('Space ID')}</strong></li>
-							</ol>
-						</div>
-
-						<div class="wallee-instructions" style="background: var(--purple-50); border-color: var(--purple-300);">
-							<h4 style="color: var(--purple-700);">${__('What is a Space?')}</h4>
-							<p style="margin: 0; font-size: 13px; color: var(--text-color);">
-								${__('A Space is like a separate environment within your Wallee account. Each Space has its own transactions, payment methods, and configurations. Typically you have one Space per business or per country.')}
-							</p>
-						</div>
-
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee-space-url.png" alt="Wallee Space URL" onerror="this.parentElement.style.display='none'">
-							<div class="wallee-screenshot-caption">${__('Example: Space ID is 80320 in the URL')}</div>
-						</div>
-
-						<div class="wallee-form-group">
-							<label>${__('Space ID')} <span class="required">*</span></label>
-							<input type="text" id="space_id" placeholder="80320" class="space-id-input">
-							<div class="help-text">${__('The ID of the Space where transactions will be processed')}</div>
 						</div>
 					</div>
 				</div>
@@ -304,6 +307,23 @@ class WalleeSetupWizard {
 				self.wizardData[field] = $(this).val();
 			}
 		});
+
+		// Update Application User link when account_id changes
+		this.$content.find('#account_id').on('input', function() {
+			self.update_app_user_link();
+		});
+	}
+
+	update_app_user_link() {
+		const accountId = this.$content.find('#account_id').val().trim();
+		const container = this.$content.find('#app-user-link-container');
+
+		if (accountId) {
+			const url = `https://app-wallee.com/a/${accountId}/user/application/list`;
+			container.html(`<br><a href="${url}" target="_blank" class="btn btn-xs btn-primary" style="margin-top: 5px;">${__('Open Application Users')} →</a>`);
+		} else {
+			container.html('');
+		}
 	}
 
 	async load_current_settings() {
@@ -324,6 +344,7 @@ class WalleeSetupWizard {
 				}
 				if (data.has_auth_key) {
 					this.$content.find('#authentication_key').attr('placeholder', '••••••••••••••••');
+					this.wizardData.has_auth_key = true;
 				}
 			}
 
@@ -354,10 +375,18 @@ class WalleeSetupWizard {
 	validate_step(step) {
 		switch (step) {
 			case 1:
-				// Account ID is optional/informational
+				// Account ID is optional but helpful
 				return true;
 
 			case 2:
+				const spaceId = this.$content.find('#space_id').val().trim();
+				if (!spaceId) {
+					frappe.msgprint(__('Please enter the Space ID'));
+					return false;
+				}
+				return true;
+
+			case 3:
 				const userId = this.$content.find('#user_id').val().trim();
 				const authKey = this.$content.find('#authentication_key').val().trim();
 
@@ -371,14 +400,6 @@ class WalleeSetupWizard {
 				}
 				return true;
 
-			case 3:
-				const spaceId = this.$content.find('#space_id').val().trim();
-				if (!spaceId) {
-					frappe.msgprint(__('Please enter the Space ID'));
-					return false;
-				}
-				return true;
-
 			case 4:
 				return true;
 		}
@@ -387,16 +408,22 @@ class WalleeSetupWizard {
 
 	collect_step_data(step) {
 		switch (step) {
+			case 1:
+				this.wizardData.account_id = this.$content.find('#account_id').val().trim();
+				break;
+
 			case 2:
+				this.wizardData.space_id = this.$content.find('#space_id').val().trim();
+				break;
+
+			case 3:
 				this.wizardData.user_id = this.$content.find('#user_id').val().trim();
 				const authKey = this.$content.find('#authentication_key').val().trim();
 				if (authKey) {
 					this.wizardData.authentication_key = authKey;
 				}
-				break;
-
-			case 3:
-				this.wizardData.space_id = this.$content.find('#space_id').val().trim();
+				// Update Application User link for step 3
+				this.update_app_user_link();
 				break;
 
 			case 4:
@@ -418,6 +445,11 @@ class WalleeSetupWizard {
 		if (this.currentStep < this.totalSteps) {
 			this.currentStep++;
 			this.show_step(this.currentStep);
+
+			// When entering step 3, update the Application User link
+			if (this.currentStep === 3) {
+				this.update_app_user_link();
+			}
 
 			// Special handling for step 4
 			if (this.currentStep === 4) {
