@@ -153,15 +153,10 @@ class WalleeSetupWizard {
 									<span id="app-user-link-container"></span>
 								</li>
 								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to add a new Application User')}</li>
-								<li>${__('Give it a name like')} <code>neoffice</code></li>
+								<li>${__('Give it a name like')} <code>Neoffice</code></li>
 								<li>${__('After creation, click on the user to view its details')}</li>
 								<li>${__('Note the')} <strong>${__('User ID')}</strong> ${__('shown at the top (e.g. #67890)')}</li>
 							</ol>
-						</div>
-
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee_page_user_app.png" alt="Application User Page">
-							<div class="wallee-screenshot-caption">${__('The User ID is shown next to the user name')}</div>
 						</div>
 
 						<div class="wallee-instructions" style="background: var(--green-50, #f0fdf4); border-color: var(--green-300, #86efac);">
@@ -203,8 +198,13 @@ class WalleeSetupWizard {
 						</div>
 
 						<div class="wallee-screenshot">
+							<img src="/assets/wallee_integration/images/wallee_page_user_app.png" alt="Application User Page">
+							<div class="wallee-screenshot-caption">${__('Find the "Roles" section and click "Manage"')}</div>
+						</div>
+
+						<div class="wallee-screenshot">
 							<img src="/assets/wallee_integration/images/wallee_add_role.png" alt="Roles Section">
-							<div class="wallee-screenshot-caption">${__('Click on "Rôles de l\'Account" to add a role')}</div>
+							<div class="wallee-screenshot-caption">${__('Click on "+" next to "Rôles de l\'Account" to add a role')}</div>
 						</div>
 
 						<div class="wallee-instructions">
