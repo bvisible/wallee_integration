@@ -1,7 +1,9 @@
 [
     {
         "doctype": "Custom Field",
+        "name": "Payment Gateway Account-wallee_payment_method_id",
         "dt": "Payment Gateway Account",
+        "module": "Wallee Integration",
         "fieldname": "wallee_payment_method_id",
         "fieldtype": "Int",
         "label": "Wallee Payment Method ID",
