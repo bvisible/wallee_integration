@@ -65,12 +65,20 @@ def get_context(context):
                     from webshop.controllers.payment_handler import handle_payment_success
                     result = handle_payment_success(payment_request_id=payment_request_name)
 
+                    frappe.log_error(f"handle_payment_success result: {result}", "Wallee Debug")
+
                     if result and result.get("status") == "success":
                         redirect_url = result.get("redirect_to")
                         if redirect_url:
                             # Redirect to thank you page
                             frappe.local.flags.redirect_location = redirect_url
                             raise frappe.Redirect
+                        else:
+                            # Success but no redirect URL - find Sales Order from Payment Request
+                            pr = frappe.get_doc("Payment Request", payment_request_name)
+                            if pr.reference_doctype == "Sales Order":
+                                frappe.local.flags.redirect_location = f"/thank_you?sales_order={pr.reference_name}"
+                                raise frappe.Redirect
                     else:
                         # Payment handler returned error
                         context.error = result.get("message") if result else _("Error processing payment")
@@ -78,7 +86,7 @@ def get_context(context):
                 except frappe.Redirect:
                     raise  # Re-raise redirect exception
                 except Exception as e:
-                    frappe.log_error(f"Error in handle_payment_success: {str(e)}", "Wallee Success Page")
+                    frappe.log_error(f"Error in handle_payment_success: {str(e)}\n{frappe.get_traceback()}", "Wallee Success Page")
                     context.error = _("Error creating order. Please contact support.")
 
             elif context.transaction.status in ["Failed", "Decline", "Voided"]:
