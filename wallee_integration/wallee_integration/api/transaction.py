@@ -210,7 +210,7 @@ def void_transaction(transaction_id):
 
 
 def get_payment_page_url(transaction_id):
-    """Get the payment page URL for a transaction"""
+    """Get the payment page URL for a transaction (redirect mode)"""
     from wallee import TransactionsService
 
     config = get_wallee_client()
@@ -225,6 +225,69 @@ def get_payment_page_url(transaction_id):
     except Exception as e:
         log_api_call("GET", f"payment/transactions/{transaction_id}/payment-page-url", error=e)
         raise
+
+
+def get_lightbox_javascript_url(transaction_id):
+    """Get the Lightbox JavaScript URL for a transaction"""
+    from wallee import TransactionsService
+
+    config = get_wallee_client()
+    space_id = get_space_id()
+    service = TransactionsService(config)
+
+    try:
+        # Note: method signature is (id, space) not (space, id)
+        response = service.get_payment_transactions_id_lightbox_javascript_url(transaction_id, space_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/lightbox-javascript-url", response_data=response)
+        return response
+    except Exception as e:
+        log_api_call("GET", f"payment/transactions/{transaction_id}/lightbox-javascript-url", error=e)
+        raise
+
+
+def get_iframe_javascript_url(transaction_id):
+    """Get the iFrame JavaScript URL for a transaction"""
+    from wallee import TransactionsService
+
+    config = get_wallee_client()
+    space_id = get_space_id()
+    service = TransactionsService(config)
+
+    try:
+        # Note: method signature is (id, space) not (space, id)
+        response = service.get_payment_transactions_id_iframe_javascript_url(transaction_id, space_id)
+        log_api_call("GET", f"payment/transactions/{transaction_id}/iframe-javascript-url", response_data=response)
+        return response
+    except Exception as e:
+        log_api_call("GET", f"payment/transactions/{transaction_id}/iframe-javascript-url", error=e)
+        raise
+
+
+def get_javascript_url(transaction_id, mode="Redirect"):
+    """
+    Get the appropriate URL based on payment mode.
+
+    Args:
+        transaction_id: Wallee transaction ID
+        mode: Payment mode - "Redirect", "Lightbox", or "iFrame"
+
+    Returns:
+        dict: {url, mode, transaction_id}
+            - For Redirect: url is the payment page URL
+            - For Lightbox/iFrame: url is the JavaScript URL to include
+    """
+    if mode == "Lightbox":
+        url = get_lightbox_javascript_url(transaction_id)
+    elif mode == "iFrame":
+        url = get_iframe_javascript_url(transaction_id)
+    else:
+        url = get_payment_page_url(transaction_id)
+
+    return {
+        "url": url,
+        "mode": mode,
+        "transaction_id": transaction_id
+    }
 
 
 def search_transactions(filters=None, page=0, size=20):

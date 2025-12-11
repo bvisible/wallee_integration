@@ -15,6 +15,7 @@
   "account_id",
   "section_webshop",
   "enable_webshop",
+  "payment_mode",
   "webshop_user_id",
   "webshop_authentication_key",
   "success_url",
@@ -95,6 +96,15 @@
    "fieldname": "enable_webshop",
    "fieldtype": "Check",
    "label": "Enable Webshop Payments"
+  },
+  {
+   "fieldname": "payment_mode",
+   "fieldtype": "Select",
+   "label": "Payment Mode",
+   "options": "Redirect\nLightbox\niFrame",
+   "default": "Redirect",
+   "depends_on": "eval:doc.enable_webshop",
+   "description": "Redirect: Customer goes to Wallee payment page<br>Lightbox: Payment form in overlay modal<br>iFrame: Embedded payment form on checkout page"
   },
   {
    "fieldname": "webshop_user_id",
