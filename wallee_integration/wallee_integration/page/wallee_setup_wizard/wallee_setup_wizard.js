@@ -313,6 +313,14 @@ class WalleeSetupWizard {
 									</select>
 									<div class="help-text">${__('Bank or cash account where payments will be recorded')}</div>
 								</div>
+
+								<div class="wallee-form-group" id="payment-methods-group" style="display: none;">
+									<label>${__('Payment Methods')}</label>
+									<div class="help-text" style="margin-bottom: 10px;">${__('Select which payment methods to enable. Each will appear as a separate option at checkout.')}</div>
+									<div id="payment-methods-list" class="payment-methods-list">
+										<div class="loading-methods">${__('Loading available methods...')}</div>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -430,6 +438,66 @@ class WalleeSetupWizard {
 		} catch (e) {
 			console.error('Error loading accounts:', e);
 		}
+	}
+
+	async load_payment_methods() {
+		const $group = this.$content.find('#payment-methods-group');
+		const $list = this.$content.find('#payment-methods-list');
+
+		try {
+			const result = await frappe.call({
+				method: 'wallee_integration.wallee_integration.page.wallee_setup_wizard.wallee_setup_wizard.get_wallee_payment_methods'
+			});
+
+			if (result.message && result.message.success && result.message.methods.length > 0) {
+				this.availablePaymentMethods = result.message.methods;
+
+				let html = '';
+				result.message.methods.forEach((method, index) => {
+					const isChecked = index === 0 ? 'checked' : ''; // First method checked by default
+					html += `
+						<div class="payment-method-item ${isChecked ? 'selected' : ''}" data-method-id="${method.id}">
+							<input type="checkbox" id="pm_${method.id}" value="${method.id}" ${isChecked}>
+							<label for="pm_${method.id}">
+								<strong>${method.title}</strong>
+								<span class="method-id">ID: ${method.id}</span>
+							</label>
+						</div>
+					`;
+				});
+
+				$list.html(html);
+				$group.show();
+
+				// Bind click events
+				$list.find('.payment-method-item').on('click', function(e) {
+					if (e.target.tagName !== 'INPUT') {
+						const checkbox = $(this).find('input[type="checkbox"]');
+						checkbox.prop('checked', !checkbox.prop('checked'));
+					}
+					$(this).toggleClass('selected', $(this).find('input').prop('checked'));
+				});
+			} else {
+				// No methods available or error
+				$list.html(`<div class="no-methods">${__('No payment methods configured in Wallee. A generic payment gateway will be created.')}</div>`);
+				$group.show();
+			}
+		} catch (e) {
+			console.error('Error loading payment methods:', e);
+			$list.html(`<div class="error-methods">${__('Could not load payment methods.')}</div>`);
+		}
+	}
+
+	getSelectedPaymentMethods() {
+		const selected = [];
+		this.$content.find('#payment-methods-list input:checked').each((i, el) => {
+			const methodId = $(el).val();
+			const method = this.availablePaymentMethods?.find(m => m.id == methodId);
+			if (method) {
+				selected.push(method);
+			}
+		});
+		return selected;
 	}
 
 	validate_step(step) {
@@ -615,6 +683,9 @@ class WalleeSetupWizard {
 				.addClass('success')
 				.text(__('Connected'));
 
+			// Load available payment methods
+			this.load_payment_methods();
+
 		} catch (e) {
 			$status.html(`
 				<div class="wallee-status error">
@@ -739,11 +810,15 @@ class WalleeSetupWizard {
 			if (this.wizardData.enable_webshop) {
 				$btn.text(__('Configuring webshop...'));
 
+				// Get selected payment methods
+				const selectedMethods = this.getSelectedPaymentMethods();
+
 				const result = await frappe.call({
 					method: 'wallee_integration.wallee_integration.page.wallee_setup_wizard.wallee_setup_wizard.setup_webshop',
 					args: {
 						currency: this.wizardData.currency,
-						payment_account: this.wizardData.payment_account
+						payment_account: this.wizardData.payment_account,
+						payment_methods: JSON.stringify(selectedMethods)
 					}
 				});
 
@@ -753,6 +828,9 @@ class WalleeSetupWizard {
 						message: result.message.error,
 						indicator: 'orange'
 					});
+				} else if (result.message.accounts && result.message.accounts.length > 0) {
+					// Store created accounts for success message
+					usersCreated.payment_accounts = result.message.accounts;
 				}
 			}
 
@@ -764,6 +842,13 @@ class WalleeSetupWizard {
 			}
 			if (usersCreated.pos && usersCreated.pos.status === 'created') {
 				successDetails += '<br><b>' + __('POS User') + ':</b> ' + usersCreated.pos.name + ' (ID: ' + usersCreated.pos.user_id + ')';
+			}
+
+			if (usersCreated.payment_accounts && usersCreated.payment_accounts.length > 0) {
+				successDetails += '<br><br><b>' + __('Payment Methods Created') + ':</b>';
+				usersCreated.payment_accounts.forEach(acc => {
+					successDetails += '<br>• ' + acc.method_title + ' (' + acc.name + ')';
+				});
 			}
 
 			successDetails += '<br><br>' + __('You can now accept payments.');

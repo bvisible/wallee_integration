@@ -164,26 +164,86 @@ def test_transaction_creation():
 
 
 @frappe.whitelist()
-def setup_webshop(currency="CHF", payment_account=None):
-    """Setup webshop integration"""
+def get_wallee_payment_methods():
+    """Get available payment methods from Wallee"""
+    try:
+        from wallee_integration.wallee_integration.api.client import get_available_payment_methods
+        return get_available_payment_methods()
+    except Exception as e:
+        return {
+            "success": False,
+            "methods": [],
+            "error": str(e)
+        }
+
+
+@frappe.whitelist()
+def setup_webshop(currency="CHF", payment_account=None, payment_methods=None):
+    """Setup webshop integration with selected payment methods"""
     try:
         from wallee_integration.wallee_integration.api.client import setup_webshop_integration
 
-        result = setup_webshop_integration(
-            currency=currency,
-            payment_account=payment_account,
-            checkout_title="Wallee",
-            checkout_description=_("Pay securely with credit card")
-        )
+        # Parse payment_methods if it's a string
+        if isinstance(payment_methods, str):
+            payment_methods = json.loads(payment_methods)
 
-        if result.get("success"):
+        created_accounts = []
+
+        if payment_methods and len(payment_methods) > 0:
+            # Create a Payment Gateway Account for each selected method
+            for method in payment_methods:
+                method_id = method.get("id")
+                method_title = method.get("title") or method.get("name")
+
+                result = setup_webshop_integration(
+                    currency=currency,
+                    payment_account=payment_account,
+                    checkout_title=f"Wallee - {method_title}",
+                    checkout_description=_("Pay with {0}").format(method_title),
+                    payment_method_id=method_id,
+                    payment_method_name=method_title
+                )
+
+                if result.get("success"):
+                    created_accounts.append({
+                        "name": result.get("payment_gateway_account"),
+                        "method_id": method_id,
+                        "method_title": method_title
+                    })
+        else:
+            # No specific methods - create generic Wallee account
+            result = setup_webshop_integration(
+                currency=currency,
+                payment_account=payment_account,
+                checkout_title="Wallee",
+                checkout_description=_("Pay securely with credit card")
+            )
+
+            if result.get("success"):
+                created_accounts.append({
+                    "name": result.get("payment_gateway_account"),
+                    "method_id": None,
+                    "method_title": "All methods"
+                })
+
+        if created_accounts:
             # Update settings
             settings = frappe.get_single("Wallee Settings")
             settings.enable_webshop = 1
             settings.save(ignore_permissions=True)
             frappe.db.commit()
 
-        return result
+            return {
+                "success": True,
+                "payment_gateway": "Wallee",
+                "accounts": created_accounts
+            }
+        else:
+            return {
+                "success": False,
+                "error": _("No payment gateway accounts were created")
+            }
+
     except Exception as e:
         return {
             "success": False,
