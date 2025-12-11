@@ -92,8 +92,8 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
 
         transaction_id = response.id
 
-        # Get payment page URL
-        payment_url = service.get_payment_transactions_id_payment_page_url(space_id, transaction_id)
+        # Get payment page URL (note: method signature is id, space - not space, id)
+        payment_url = service.get_payment_transactions_id_payment_page_url(transaction_id, space_id)
         log_api_call("GET", f"payment/transactions/{transaction_id}/payment-page-url", response_data=payment_url)
 
         return {
@@ -123,7 +123,8 @@ def get_transaction_status(transaction_id):
     service = TransactionsService(config)
 
     try:
-        response = service.get_payment_transactions_id(space_id, transaction_id)
+        # Note: method signature is (id, space) not (space, id)
+        response = service.get_payment_transactions_id(transaction_id, space_id)
         log_api_call("GET", f"payment/transactions/{transaction_id}", response_data=response.to_dict())
         return {
             "id": response.id,
@@ -156,7 +157,8 @@ def get_full_transaction(transaction_id):
     service = TransactionsService(config)
 
     try:
-        response = service.get_payment_transactions_id(space_id, transaction_id)
+        # Note: method signature is (id, space) not (space, id)
+        response = service.get_payment_transactions_id(transaction_id, space_id)
         log_api_call("GET", f"payment/transactions/{transaction_id}/full", response_data=response.to_dict())
 
         # Return the full response object converted to dict
@@ -175,7 +177,8 @@ def complete_transaction_online(transaction_id):
     service = TransactionsService(config)
 
     try:
-        response = service.post_payment_transactions_id_complete_online(space_id, transaction_id)
+        # Note: method signature is (id, space) not (space, id)
+        response = service.post_payment_transactions_id_complete_online(transaction_id, space_id)
         log_api_call("POST", f"payment/transactions/{transaction_id}/complete-online", response_data=response.to_dict())
         return response
     except Exception as e:
@@ -197,7 +200,8 @@ def void_transaction(transaction_id):
     service = TransactionsService(config)
 
     try:
-        response = service.post_payment_transactions_id_void_online(space_id, transaction_id)
+        # Note: method signature is (id, space) not (space, id)
+        response = service.post_payment_transactions_id_void_online(transaction_id, space_id)
         log_api_call("POST", f"payment/transactions/{transaction_id}/void", response_data=response.to_dict())
         return response
     except Exception as e:
@@ -214,7 +218,8 @@ def get_payment_page_url(transaction_id):
     service = TransactionsService(config)
 
     try:
-        response = service.get_payment_transactions_id_payment_page_url(space_id, transaction_id)
+        # Note: method signature is (id, space) not (space, id)
+        response = service.get_payment_transactions_id_payment_page_url(transaction_id, space_id)
         log_api_call("GET", f"payment/transactions/{transaction_id}/payment-page-url", response_data=response)
         return response
     except Exception as e:
