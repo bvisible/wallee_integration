@@ -290,6 +290,58 @@ def get_javascript_url(transaction_id, mode="Redirect"):
     }
 
 
+def get_payment_method_configurations(transaction_id, integration_mode="IFRAME"):
+    """
+    Get available payment method configurations for a transaction.
+
+    Args:
+        transaction_id: Wallee transaction ID
+        integration_mode: IFRAME, LIGHTBOX, or PAYMENT_PAGE
+
+    Returns:
+        list: List of payment method configurations with id and name
+    """
+    from wallee import TransactionsService
+
+    config = get_wallee_client()
+    space_id = get_space_id()
+    service = TransactionsService(config)
+
+    try:
+        response = service.get_payment_transactions_id_payment_method_configurations(
+            transaction_id,
+            integration_mode,
+            space_id
+        )
+        log_api_call(
+            "GET",
+            f"payment/transactions/{transaction_id}/payment-method-configurations",
+            {"integration_mode": integration_mode},
+            response.to_dict() if hasattr(response, 'to_dict') else str(response)
+        )
+
+        # Extract payment methods from response
+        methods = []
+        if hasattr(response, 'items') and response.items:
+            for m in response.items:
+                methods.append({
+                    "id": m.id,
+                    "name": getattr(m, 'name', None),
+                    "resolved_title": getattr(m, 'resolved_title', None),
+                    "resolved_description": getattr(m, 'resolved_description', None),
+                    "image_url": getattr(m, 'resolved_image_url', None)
+                })
+        return methods
+    except Exception as e:
+        log_api_call(
+            "GET",
+            f"payment/transactions/{transaction_id}/payment-method-configurations",
+            {"integration_mode": integration_mode},
+            error=e
+        )
+        raise
+
+
 def search_transactions(filters=None, page=0, size=20):
     """Search transactions with filters - returns list of transactions"""
     from wallee import TransactionsService
