@@ -149,7 +149,7 @@ class WalleeSetupWizard {
 									<span id="app-user-link-container"></span>
 								</li>
 								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to add a new Application User')}</li>
-								<li>${__('Give it a name like')} <code>ERPNext Integration</code></li>
+								<li>${__('Give it a name like')} <code>neoffice</code></li>
 								<li>${__('After creation, click on the user and go to')} <strong>${__('Authentication')}</strong></li>
 								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to generate an Authentication Key')}</li>
 								<li><strong>${__('Important:')}</strong> ${__('Copy the key immediately - it will only be shown once!')}</li>
