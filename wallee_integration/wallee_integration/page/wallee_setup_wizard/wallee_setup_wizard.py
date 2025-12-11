@@ -232,14 +232,13 @@ def save_features(enable_webshop=False, enable_pos_terminal=False):
 
 @frappe.whitelist()
 def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
-    """Create dedicated Application Users for Webshop and/or POS with restricted roles"""
+    """Create dedicated Application Users for Webshop and/or POS with Account Admin role"""
     from wallee import (
         Configuration,
         ApplicationUsersService,
         ApplicationUserCreate,
         ApplicationUsersRolesService,
-        AccountsService,
-        RolesService
+        AccountsService
     )
 
     settings = frappe.get_single("Wallee Settings")
@@ -274,17 +273,8 @@ def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
         # Save account_id to settings
         settings.account_id = account_id
 
-        # Get available roles to find webshop role
-        role_service = RolesService(config)
-        roles = role_service.get_roles(limit=100)
-
-        # Find webshop role (ID 5802 or by name)
-        webshop_role_id = None
-        for role in roles.data:
-            role_name = role.name.get('en-US', '') if isinstance(role.name, dict) else str(role.name)
-            if 'webshop' in role_name.lower():
-                webshop_role_id = role.id
-                break
+        # Account Admin role ID (standard Wallee role with full permissions)
+        ACCOUNT_ADMIN_ROLE_ID = 2
 
         user_service = ApplicationUsersService(config)
         role_assign_service = ApplicationUsersRolesService(config)
@@ -308,13 +298,12 @@ def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
 
                     created_user = user_service.post_application_users(webshop_user)
 
-                    # Assign webshop role at Space level if found
-                    if webshop_role_id:
-                        role_assign_service.post_application_users_user_id_space_roles(
-                            user_id=created_user.id,
-                            role_id=webshop_role_id,
-                            space=space_id
-                        )
+                    # Assign Account Admin role at Account level for full permissions
+                    role_assign_service.post_application_users_user_id_account_roles(
+                        user_id=created_user.id,
+                        role_id=ACCOUNT_ADMIN_ROLE_ID,
+                        account=account_id
+                    )
 
                     # Save credentials to settings
                     settings.webshop_user_id = created_user.id
@@ -324,7 +313,7 @@ def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
                         "status": "created",
                         "user_id": created_user.id,
                         "name": created_user.name,
-                        "role_assigned": webshop_role_id is not None
+                        "role_assigned": True
                     }
                 except Exception as e:
                     results["webshop"] = {
@@ -351,15 +340,12 @@ def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
 
                     created_user = user_service.post_application_users(pos_user)
 
-                    # For POS, we might want Account Admin at Space level
-                    # or a specific POS role if available
-                    # Using webshop role for now if available
-                    if webshop_role_id:
-                        role_assign_service.post_application_users_user_id_space_roles(
-                            user_id=created_user.id,
-                            role_id=webshop_role_id,
-                            space=space_id
-                        )
+                    # Assign Account Admin role at Account level for full permissions
+                    role_assign_service.post_application_users_user_id_account_roles(
+                        user_id=created_user.id,
+                        role_id=ACCOUNT_ADMIN_ROLE_ID,
+                        account=account_id
+                    )
 
                     # Save credentials to settings
                     settings.pos_user_id = created_user.id
@@ -369,7 +355,7 @@ def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
                         "status": "created",
                         "user_id": created_user.id,
                         "name": created_user.name,
-                        "role_assigned": webshop_role_id is not None
+                        "role_assigned": True
                     }
                 except Exception as e:
                     results["pos"] = {
@@ -381,6 +367,87 @@ def create_dedicated_users(enable_webshop=False, enable_pos_terminal=False):
         # Save all changes to settings
         settings.save(ignore_permissions=True)
         frappe.db.commit()
+
+        return results
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@frappe.whitelist()
+def fix_user_permissions():
+    """Add Account Admin role to existing users that may be missing permissions"""
+    from wallee import (
+        Configuration,
+        ApplicationUsersRolesService,
+        AccountsService
+    )
+
+    settings = frappe.get_single("Wallee Settings")
+
+    if not settings.user_id or not settings.authentication_key:
+        return {
+            "success": False,
+            "error": _("Admin credentials not configured.")
+        }
+
+    config = Configuration(
+        user_id=int(settings.user_id),
+        authentication_key=settings.get_password("authentication_key")
+    )
+
+    ACCOUNT_ADMIN_ROLE_ID = 2
+
+    try:
+        # Get Account ID
+        acc_service = AccountsService(config)
+        accounts = acc_service.get_accounts(limit=1)
+        if not accounts.data:
+            return {"success": False, "error": _("No Wallee account found")}
+
+        account_id = accounts.data[0].id
+        role_assign_service = ApplicationUsersRolesService(config)
+
+        results = {"success": True, "users_updated": []}
+
+        # Update main user
+        try:
+            role_assign_service.post_application_users_user_id_account_roles(
+                user_id=int(settings.user_id),
+                role_id=ACCOUNT_ADMIN_ROLE_ID,
+                account=account_id
+            )
+            results["users_updated"].append(f"Main user {settings.user_id}")
+        except Exception as e:
+            # May already have the role
+            pass
+
+        # Update webshop user if exists
+        if settings.webshop_user_id:
+            try:
+                role_assign_service.post_application_users_user_id_account_roles(
+                    user_id=int(settings.webshop_user_id),
+                    role_id=ACCOUNT_ADMIN_ROLE_ID,
+                    account=account_id
+                )
+                results["users_updated"].append(f"Webshop user {settings.webshop_user_id}")
+            except Exception as e:
+                pass
+
+        # Update POS user if exists
+        if settings.pos_user_id:
+            try:
+                role_assign_service.post_application_users_user_id_account_roles(
+                    user_id=int(settings.pos_user_id),
+                    role_id=ACCOUNT_ADMIN_ROLE_ID,
+                    account=account_id
+                )
+                results["users_updated"].append(f"POS user {settings.pos_user_id}")
+            except Exception as e:
+                pass
 
         return results
 
