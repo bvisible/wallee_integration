@@ -322,15 +322,19 @@ def get_payment_method_configurations(transaction_id, integration_mode="IFRAME")
 
         # Extract payment methods from response
         methods = []
-        if hasattr(response, 'items') and response.items:
-            for m in response.items:
-                methods.append({
-                    "id": m.id,
-                    "name": getattr(m, 'name', None),
-                    "resolved_title": getattr(m, 'resolved_title', None),
-                    "resolved_description": getattr(m, 'resolved_description', None),
-                    "image_url": getattr(m, 'resolved_image_url', None)
-                })
+        # Response is PaymentMethodConfigurationListResponse with .data attribute
+        data_list = getattr(response, 'data', None) or getattr(response, 'items', None) or []
+        if isinstance(response, list):
+            data_list = response
+
+        for m in data_list:
+            methods.append({
+                "id": m.id,
+                "name": getattr(m, 'name', None),
+                "resolved_title": getattr(m, 'resolved_title', None),
+                "resolved_description": getattr(m, 'resolved_description', None),
+                "image_url": getattr(m, 'resolved_image_url', None)
+            })
         return methods
     except Exception as e:
         log_api_call(
