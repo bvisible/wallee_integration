@@ -13,11 +13,26 @@
 				</div>
 				<h2 class="mb-3">{{ _("Payment Failed") }}</h2>
 				<p class="text-muted mb-4">{{ _("We're sorry, but your payment could not be processed. Please try again or use a different payment method.") }}</p>
-				{% if transaction and transaction.failure_reason %}
+
+				{% if failure_reason %}
 				<div class="alert alert-danger mb-4">
-					<strong>{{ _("Reason") }}:</strong> {{ transaction.failure_reason }}
+					<strong>{{ _("Reason") }}:</strong> {{ failure_reason }}
 				</div>
 				{% endif %}
+
+				<div class="payment-details card mb-4">
+					<div class="card-body">
+						{% if transaction %}
+						<p><strong>{{ _("Transaction ID") }}:</strong> {{ transaction.transaction_id }}</p>
+						<p><strong>{{ _("Status") }}:</strong> {{ transaction.status }}</p>
+						{% endif %}
+						{% if payment_request %}
+						<p><strong>{{ _("Reference") }}:</strong> {{ payment_request.name }}</p>
+						<p><strong>{{ _("Amount") }}:</strong> {{ frappe.format_value(payment_request.grand_total, {"fieldtype": "Currency", "options": payment_request.currency}) }}</p>
+						{% endif %}
+					</div>
+				</div>
+
 				<a href="/cart" class="btn btn-primary">{{ _("Try Again") }}</a>
 				<a href="/contact" class="btn btn-outline-secondary ml-2">{{ _("Contact Support") }}</a>
 			</div>
