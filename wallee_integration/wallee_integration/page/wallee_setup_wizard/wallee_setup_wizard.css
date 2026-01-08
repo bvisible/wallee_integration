@@ -191,6 +191,29 @@
     text-decoration: underline;
 }
 
+.wallee-instructions a.wallee-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--primary);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.wallee-instructions a.wallee-link:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.wallee-instructions a.wallee-link::after {
+    content: '↗';
+    font-size: 10px;
+}
+
 /* Screenshot Preview */
 .wallee-screenshot {
     border: 1px solid var(--border-color);
@@ -198,12 +221,25 @@
     overflow: hidden;
     margin: 16px 0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wallee-screenshot:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
 }
 
 .wallee-screenshot img {
     width: 100%;
     height: auto;
     display: block;
+    transition: transform 0.2s ease;
+}
+
+.wallee-screenshot:hover img {
+    transform: scale(1.01);
 }
 
 .wallee-screenshot-caption {
@@ -295,7 +331,8 @@
 }
 
 .wallee-wizard-actions .btn-primary:hover {
-    background: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
 }
 
 .wallee-wizard-actions .btn-secondary {
@@ -305,7 +342,8 @@
 }
 
 .wallee-wizard-actions .btn-secondary:hover {
-    background: var(--gray-100);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
 }
 
 /* Test Connection Button */
@@ -324,7 +362,8 @@
 }
 
 .wallee-test-btn:hover {
-    background: var(--green-600);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
 }
 
 .wallee-test-btn:disabled {
@@ -611,4 +650,113 @@
 
 [data-theme="dark"] .payment-method-item .method-id {
     background: var(--gray-700);
+}
+
+/* Help Steps with Images (same as Terminal Wizard) */
+.config-help-steps {
+    border-top: 1px solid var(--border-color);
+    padding-top: 15px;
+}
+
+.help-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: var(--card-bg);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.help-step:hover {
+    background: var(--bg-light-gray);
+    border-color: var(--gray-400);
+}
+
+/* Only show pointer cursor and strong hover for steps with images */
+.help-step:has(.help-img) {
+    cursor: pointer;
+}
+
+.help-step:has(.help-img):hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.help-step .step-number {
+    background: var(--primary);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.help-step .step-text {
+    flex: 1;
+    font-size: 13px;
+    padding-top: 2px;
+}
+
+.help-step .help-img {
+    max-width: 200px;
+    max-height: 120px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.help-step .help-img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.help-step .help-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.help-step .help-btn:hover {
+    background: var(--primary-dark, #1a56db);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+    color: white;
+    text-decoration: none;
+}
+
+.help-step .help-btn::after {
+    content: '↗';
+    font-size: 10px;
+}
+
+/* Responsive for help steps */
+@media (max-width: 768px) {
+    .help-step {
+        flex-direction: column;
+    }
+
+    .help-step .help-img {
+        max-width: 100%;
+    }
 }

@@ -61,6 +61,95 @@ class WalleePaymentTerminal(Document):
 		except Exception as e:
 			frappe.throw(_("Failed to trigger balance: {0}").format(str(e)))
 
+	@frappe.whitelist()
+	def create_in_wallee(self):
+		"""Create this terminal in Wallee API"""
+		from wallee_integration.wallee_integration.api.terminal import create_terminal
+
+		if self.terminal_id:
+			frappe.throw(_("Terminal already exists in Wallee (ID: {0})").format(self.terminal_id))
+
+		if not self.terminal_type_id:
+			frappe.throw(_("Terminal Type ID is required to create a terminal"))
+
+		try:
+			result = create_terminal(
+				name=self.terminal_name,
+				terminal_type_id=self.terminal_type_id,
+				configuration_version=self.configuration_version if self.configuration_version else None,
+				location_version=self.location_version if self.location_version else None
+			)
+
+			self.terminal_id = result.get("id")
+			self.identifier = result.get("identifier")
+			self.registration_status = "Created"
+			self.last_sync = now_datetime()
+			self.save()
+
+			frappe.msgprint(
+				_("Terminal created in Wallee with ID: {0}").format(self.terminal_id),
+				indicator="green"
+			)
+			return result
+		except Exception as e:
+			frappe.throw(_("Failed to create terminal in Wallee: {0}").format(str(e)))
+
+	@frappe.whitelist()
+	def link_device(self, serial_number):
+		"""Link this terminal to a physical device using its serial number"""
+		from wallee_integration.wallee_integration.api.terminal import link_terminal_device
+
+		if not self.terminal_id:
+			frappe.throw(_("Terminal must be created in Wallee first"))
+
+		if not serial_number:
+			frappe.throw(_("Serial number is required"))
+
+		try:
+			result = link_terminal_device(self.terminal_id, serial_number)
+
+			self.device_serial_number = serial_number
+			# The identifier after linking contains the activation code
+			self.activation_code = result.get("identifier")
+			self.registration_status = "Linked"
+			self.last_sync = now_datetime()
+			self.save()
+
+			frappe.msgprint(
+				_("Terminal linked successfully. Activation code: {0}").format(self.activation_code),
+				indicator="green",
+				alert=True
+			)
+			return {
+				"success": True,
+				"activation_code": self.activation_code,
+				"message": _("Enter this code on your terminal to activate it")
+			}
+		except Exception as e:
+			frappe.throw(_("Failed to link terminal: {0}").format(str(e)))
+
+	@frappe.whitelist()
+	def unlink_device(self):
+		"""Unlink this terminal from its physical device"""
+		from wallee_integration.wallee_integration.api.terminal import unlink_terminal_device
+
+		if not self.terminal_id:
+			frappe.throw(_("Terminal ID is required"))
+
+		try:
+			result = unlink_terminal_device(self.terminal_id)
+
+			self.device_serial_number = None
+			self.activation_code = None
+			self.registration_status = "Created"
+			self.last_sync = now_datetime()
+			self.save()
+
+			frappe.msgprint(_("Terminal unlinked successfully"), indicator="green")
+			return result
+		except Exception as e:
+			frappe.throw(_("Failed to unlink terminal: {0}").format(str(e)))
+
 
 def get_default_terminal():
 	"""Get the default payment terminal"""

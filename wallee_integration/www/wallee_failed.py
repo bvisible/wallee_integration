@@ -42,7 +42,7 @@ def get_context(context):
                 context.transaction.sync_status()
                 context.transaction.reload()
             except Exception as e:
-                frappe.log_error(f"Error syncing Wallee transaction: {str(e)}", "Wallee Failed Page")
+                frappe.log_error("Wallee sync error", f"Error syncing transaction: {str(e)}")
 
             context.failure_reason = context.transaction.failure_reason
 
@@ -50,7 +50,7 @@ def get_context(context):
             context.failure_reason = _("Payment was declined or cancelled")
 
     except Exception as e:
-        frappe.log_error(f"Wallee failed page error: {str(e)}", "Wallee Failed Page")
+        frappe.log_error("Wallee failed page error", str(e))
         context.failure_reason = _("An error occurred while retrieving payment information")
 
     return context

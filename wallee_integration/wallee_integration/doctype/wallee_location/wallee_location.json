@@ -8,15 +8,19 @@
  "field_order": [
   "location_name",
   "is_active",
+  "is_default",
   "column_break_1",
   "wallee_location_id",
+  "wallee_location_version_id",
   "section_address",
   "street",
   "city",
   "column_break_address",
   "postal_code",
   "state",
-  "country"
+  "country",
+  "section_sync",
+  "last_sync"
  ],
  "fields": [
   {
@@ -34,6 +38,12 @@
    "label": "Is Active"
   },
   {
+   "default": "0",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Is Default"
+  },
+  {
    "fieldname": "column_break_1",
    "fieldtype": "Column Break"
   },
@@ -41,8 +51,13 @@
    "fieldname": "wallee_location_id",
    "fieldtype": "Data",
    "label": "Wallee Location ID",
-   "read_only": 1,
-   "description": "ID from Wallee if synchronized"
+   "description": "Location ID from Wallee portal"
+  },
+  {
+   "fieldname": "wallee_location_version_id",
+   "fieldtype": "Data",
+   "label": "Location Version ID",
+   "description": "Version ID used when creating terminals via API"
   },
   {
    "fieldname": "section_address",
@@ -83,11 +98,23 @@
    "reqd": 1,
    "default": "Switzerland",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "section_sync",
+   "fieldtype": "Section Break",
+   "label": "Sync Info",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "last_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Sync",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-12-10 14:00:00.000000",
+ "modified": "2024-12-13 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wallee Integration",
  "name": "Wallee Location",

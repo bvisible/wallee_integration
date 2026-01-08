@@ -21,7 +21,6 @@
   "success_url",
   "failed_url",
   "column_break_webshop",
-  "default_payment_method",
   "section_pos",
   "enable_pos_terminal",
   "pos_user_id",
@@ -29,6 +28,11 @@
   "default_terminal",
   "column_break_pos",
   "auto_capture",
+  "section_terminal_defaults",
+  "default_terminal_configuration",
+  "default_terminal_location",
+  "column_break_terminal_defaults",
+  "btn_terminal_wizard",
   "section_advanced",
   "webhook_secret",
   "log_api_calls",
@@ -139,12 +143,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "default_payment_method",
-   "fieldtype": "Data",
-   "label": "Default Payment Method",
-   "description": "Default payment method for webshop"
-  },
-  {
    "fieldname": "section_pos",
    "fieldtype": "Section Break",
    "label": "POS Terminal Settings"
@@ -190,6 +188,36 @@
    "description": "Automatically capture authorized transactions"
   },
   {
+   "fieldname": "section_terminal_defaults",
+   "fieldtype": "Section Break",
+   "label": "Terminal Defaults",
+   "depends_on": "eval:doc.enable_pos_terminal"
+  },
+  {
+   "fieldname": "default_terminal_configuration",
+   "fieldtype": "Link",
+   "label": "Default Terminal Configuration",
+   "options": "Wallee Terminal Configuration",
+   "description": "Default configuration for new terminals"
+  },
+  {
+   "fieldname": "default_terminal_location",
+   "fieldtype": "Link",
+   "label": "Default Terminal Location",
+   "options": "Wallee Location",
+   "description": "Default location for new terminals"
+  },
+  {
+   "fieldname": "column_break_terminal_defaults",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "btn_terminal_wizard",
+   "fieldtype": "Button",
+   "label": "Open Terminal Wizard",
+   "description": "Open the Terminal Registration Wizard"
+  },
+  {
    "fieldname": "section_advanced",
    "fieldtype": "Section Break",
    "label": "Advanced Settings",
@@ -223,7 +251,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-12-10 12:00:00.000000",
+ "modified": "2024-12-13 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wallee Integration",
  "name": "Wallee Settings",

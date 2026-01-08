@@ -29,6 +29,14 @@ def save_credentials(user_id, authentication_key, space_id):
     settings.authentication_key = authentication_key
     settings.space_id = space_id
     settings.enabled = 1
+
+    # Set default URLs if not already set
+    site_url = frappe.utils.get_url()
+    if not settings.success_url:
+        settings.success_url = f"{site_url}/wallee/success"
+    if not settings.failed_url:
+        settings.failed_url = f"{site_url}/wallee/failed"
+
     settings.save(ignore_permissions=True)
     frappe.db.commit()
 

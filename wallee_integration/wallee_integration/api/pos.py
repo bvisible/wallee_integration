@@ -61,33 +61,38 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 	}]
 
 	# Create transaction in Wallee
+	# IMPORTANT: For terminal payments, auto_confirm must be False
+	# The transaction needs to be in PENDING state for terminal processing
 	transaction = create_transaction(
 		line_items=line_items,
 		currency=currency,
 		merchant_reference=pos_invoice or frappe.generate_hash()[:16],
-		auto_confirm=True
+		auto_confirm=False
 	)
+
+	transaction_id = transaction.get("transaction_id")
+	merchant_reference = pos_invoice or frappe.generate_hash()[:16]
 
 	# Create local transaction record
 	local_transaction = create_transaction_record(
-		transaction_id=transaction.id,
+		transaction_id=transaction_id,
 		amount=amount,
 		currency=currency,
 		transaction_type="Terminal",
 		terminal=terminal_doc.name,
 		pos_invoice=pos_invoice,
 		customer=customer,
-		merchant_reference=transaction.merchant_reference
+		merchant_reference=merchant_reference
 	)
 
 	# Initiate payment on terminal
 	try:
-		result = initiate_terminal_transaction(terminal_doc.terminal_id, transaction.id)
+		result = initiate_terminal_transaction(terminal_doc.terminal_id, transaction_id)
 
 		return {
 			"success": True,
 			"transaction_name": local_transaction.name,
-			"transaction_id": transaction.id,
+			"transaction_id": transaction_id,
 			"terminal": terminal_doc.terminal_name,
 			"amount": amount,
 			"currency": currency,

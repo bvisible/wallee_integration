@@ -116,12 +116,12 @@ def get_available_payment_methods():
 		dict: {success: bool, methods: list, error: str}
 	"""
 	try:
-		from wallee import PaymentMethodConfigurationService
+		from wallee.service.payment_method_configurations_service import PaymentMethodConfigurationsService
 
 		config = get_wallee_client()
 		space_id = get_space_id()
 
-		service = PaymentMethodConfigurationService(config)
+		service = PaymentMethodConfigurationsService(config)
 		response = service.get_all_payment_method_configurations(space_id)
 
 		# Extract method list from response
@@ -165,7 +165,7 @@ def get_available_payment_methods():
 		}
 
 	except Exception as e:
-		frappe.log_error(f"Failed to get Wallee payment methods: {str(e)}", "Wallee API Error")
+		frappe.log_error("Wallee payment methods error", f"Failed to get payment methods: {str(e)}")
 		return {
 			"success": False,
 			"methods": [],
@@ -284,7 +284,7 @@ def setup_webshop_integration(currency="CHF", payment_account=None, checkout_tit
 		}
 
 	except Exception as e:
-		frappe.log_error(f"Failed to setup Wallee webshop integration: {str(e)}", "Wallee Setup Error")
+		frappe.log_error("Wallee setup error", f"Failed to setup webshop integration: {str(e)}")
 		return {
 			"success": False,
 			"error": str(e)

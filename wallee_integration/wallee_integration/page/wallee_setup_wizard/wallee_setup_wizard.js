@@ -2,6 +2,85 @@ frappe.pages['wallee-setup-wizard'].on_page_load = function(wrapper) {
 	new WalleeSetupWizard(wrapper);
 };
 
+// Helper function to show image in dialog with step info
+function showHelpImageDialog(imgSrc, stepNumber, stepText) {
+	const title = stepNumber ? __('Step {0}', [stepNumber]) : (stepText || __('Help'));
+	const dialog = new frappe.ui.Dialog({
+		title: title,
+		size: 'large',
+		fields: [
+			{
+				fieldtype: 'HTML',
+				options: `
+					<div class="help-dialog-content">
+						${stepNumber ? `
+						<div class="help-dialog-text">
+							<div class="help-dialog-step-badge">${stepNumber}</div>
+							<p>${stepText || ''}</p>
+						</div>
+						` : (stepText ? `<div class="help-dialog-caption">${stepText}</div>` : '')}
+						<div class="help-dialog-image">
+							<img src="${imgSrc}" alt="Step ${stepNumber || ''}">
+						</div>
+					</div>
+					<style>
+						.help-dialog-content {
+							display: flex;
+							flex-direction: column;
+							gap: 15px;
+						}
+						.help-dialog-text {
+							display: flex;
+							align-items: flex-start;
+							gap: 12px;
+							padding: 15px;
+							background: var(--bg-light-gray);
+							border-radius: 8px;
+						}
+						.help-dialog-step-badge {
+							background: var(--primary);
+							color: white;
+							width: 28px;
+							height: 28px;
+							border-radius: 50%;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							font-weight: bold;
+							flex-shrink: 0;
+						}
+						.help-dialog-text p {
+							margin: 0;
+							font-size: 14px;
+							line-height: 1.5;
+							padding-top: 3px;
+						}
+						.help-dialog-image {
+							text-align: center;
+						}
+						.help-dialog-image img {
+							max-width: 100%;
+							max-height: 60vh;
+							border: 1px solid var(--border-color);
+							border-radius: 8px;
+							box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+						}
+						.help-dialog-caption {
+							text-align: center;
+							font-size: 14px;
+							color: var(--text-muted);
+							padding: 10px;
+							background: var(--bg-light-gray);
+							border-radius: 6px;
+						}
+					</style>
+				`
+			}
+		]
+	});
+	dialog.show();
+}
+
 class WalleeSetupWizard {
 	constructor(wrapper) {
 		this.wrapper = wrapper;
@@ -79,22 +158,30 @@ class WalleeSetupWizard {
 
 						<div class="wallee-instructions">
 							<h4>${__('Getting Started')}</h4>
-							<ol>
-								<li>${__('Go to')} <a href="https://app-wallee.com" target="_blank">app-wallee.com</a> ${__('and log in to your account')}</li>
-								<li>${__('After login, go to')} <a href="https://app-wallee.com/account/select" target="_blank">app-wallee.com/account/select</a></li>
-								<li>${__('You will see your Account ID displayed next to each account name')}</li>
-								<li>${__('Or look at the URL when viewing an account:')} <code>https://app-wallee.com/a/<strong>12345</strong>/...</code></li>
-							</ol>
+							<p style="margin: 0; font-size: 13px;">${__('Find your Wallee Account ID:')}</p>
 						</div>
 
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee_account_id_guide.png" alt="Wallee Account URL">
-							<div class="wallee-screenshot-caption">${__('Example: Account ID is 12345 in the URL')}</div>
+						<div class="config-help-steps">
+							<div class="help-step" data-step="1">
+								<span class="step-number">1</span>
+								<span class="step-text">${__('Go to app-wallee.com and log in to your account')}</span>
+								<a href="https://app-wallee.com" target="_blank" class="help-btn">${__('Open Wallee')}</a>
+							</div>
+							<div class="help-step" data-step="2">
+								<span class="step-number">2</span>
+								<span class="step-text">${__('Go to Account Selection to see your Account ID next to each account name')}</span>
+								<a href="https://app-wallee.com/account/select" target="_blank" class="help-btn">${__('Open')}</a>
+							</div>
+							<div class="help-step" data-step="3">
+								<span class="step-number">3</span>
+								<span class="step-text">${__('Or look at the URL when viewing an account: https://app-wallee.com/a/12345/...')}</span>
+								<img class="help-img" src="/assets/wallee_integration/images/wallee_account_id_guide.png" alt="Account ID">
+							</div>
 						</div>
 
-						<div class="wallee-form-group">
+						<div class="wallee-form-group" style="margin-top: 20px;">
 							<label>${__('Account ID')} <span class="required">*</span></label>
-							<input type="text" id="account_id" placeholder="12345" class="account-id-input">
+							<input type="text" id="account_id" placeholder="12345" class="account-id-input" autocomplete="off">
 							<div class="help-text">${__('This is used to create Application Users. The Space ID is required for API calls.')}</div>
 						</div>
 					</div>
@@ -110,29 +197,32 @@ class WalleeSetupWizard {
 
 						<div class="wallee-instructions">
 							<h4>${__('Find Your Space ID')}</h4>
-							<ol>
-								<li>${__('In Wallee, click on')} <strong>Space</strong> ${__('in the left sidebar')}</li>
-								<li>${__('Select the Space you want to use for payments')}</li>
-								<li>${__('Look at the URL - it should look like:')} <code>https://app-wallee.com/s/<strong>98765</strong>/space/current/view</code></li>
-								<li>${__('The number after')} <code>/s/</code> ${__('is your')} <strong>${__('Space ID')}</strong></li>
-							</ol>
+							<p style="margin: 0; font-size: 13px;">${__('The Space ID is shown in your Account Dashboard:')}</p>
 						</div>
 
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee_space_id_guide.png" alt="Wallee Space URL">
-							<div class="wallee-screenshot-caption">${__('Example: Space ID is 98765 in the URL')}</div>
+						<div class="config-help-steps">
+							<div class="help-step" data-step="1">
+								<span class="step-number">1</span>
+								<span class="step-text">${__('Open your Account Dashboard')}</span>
+								<a href="https://app-wallee.com" target="_blank" class="help-btn" id="open-wallee-spaces-link">${__('Open')}</a>
+							</div>
+							<div class="help-step" data-step="2">
+								<span class="step-number">2</span>
+								<span class="step-text">${__('Copy the Space ID shown next to your Space name (e.g. #89359)')}</span>
+								<img class="help-img" src="/assets/wallee_integration/images/wallee_space_id_guide.png" alt="Space ID">
+							</div>
 						</div>
 
-						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd);">
+						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd); margin-top: 15px;">
 							<h4 style="color: var(--blue-700, #1d4ed8);">${__('What is a Space?')}</h4>
 							<p style="margin: 0; font-size: 13px; color: var(--text-color);">
 								${__('A Space is like a separate environment within your Wallee account. Each Space has its own transactions, payment methods, and configurations. Typically you have one Space per business or per country.')}
 							</p>
 						</div>
 
-						<div class="wallee-form-group">
+						<div class="wallee-form-group" style="margin-top: 20px;">
 							<label>${__('Space ID')} <span class="required">*</span></label>
-							<input type="text" id="space_id" placeholder="98765" class="space-id-input">
+							<input type="text" id="space_id" placeholder="98765" class="space-id-input" autocomplete="off">
 							<div class="help-text">${__('The ID of the Space where transactions will be processed')}</div>
 						</div>
 					</div>
@@ -148,34 +238,43 @@ class WalleeSetupWizard {
 
 						<div class="wallee-instructions">
 							<h4>${__('Create an Application User for API Access')}</h4>
-							<ol>
-								<li>${__('In Wallee, go to')} <strong>Account → Users → Application Users</strong>
-									<span id="app-user-link-container"></span>
-								</li>
-								<li>${__('Click')} <strong>${__('Create')}</strong> ${__('to add a new Application User')}</li>
-								<li>${__('Give it a name like')} <code>Neoffice</code></li>
-								<li>${__('After creation, click on the user to view its details')}</li>
-								<li>${__('Note the')} <strong>${__('User ID')}</strong> ${__('shown at the top (e.g. #67890)')}</li>
-							</ol>
+							<p style="margin: 0; font-size: 13px;">${__('Follow these steps in Wallee to create an Application User:')}</p>
 						</div>
 
-						<div class="wallee-instructions" style="background: var(--green-50, #f0fdf4); border-color: var(--green-300, #86efac);">
-							<h4 style="color: var(--green-700, #15803d);">${__('Generate Authentication Key')}</h4>
-							<ol>
-								<li>${__('On the Application User page, click')} <strong>${__('Generate a new key')}</strong></li>
-								<li><strong>${__('Important:')}</strong> ${__('Copy the key immediately - it will only be shown once!')}</li>
-							</ol>
+						<div class="config-help-steps">
+							<div class="help-step" data-step="1">
+								<span class="step-number">1</span>
+								<span class="step-text">${__('In Wallee, go to Account → Users → Application Users')}</span>
+								<a href="https://app-wallee.com" target="_blank" class="help-btn" id="open-app-users-link">${__('Open')}</a>
+							</div>
+							<div class="help-step" data-step="2">
+								<span class="step-number">2</span>
+								<span class="step-text">${__('Click "Create" to add a new Application User')}</span>
+							</div>
+							<div class="help-step" data-step="3">
+								<span class="step-number">3</span>
+								<span class="step-text">${__('Give it a name like "Neoffice" and save')}</span>
+							</div>
+							<div class="help-step" data-step="4">
+								<span class="step-number">4</span>
+								<span class="step-text">${__('Click on the user to view its details and note the User ID (e.g. #67890)')}</span>
+								<img class="help-img" src="/assets/wallee_integration/images/wallee_page_user_app.png" alt="User ID">
+							</div>
+							<div class="help-step" data-step="5">
+								<span class="step-number">5</span>
+								<span class="step-text">${__('Click "Generate a new key" and copy it immediately - it will only be shown once!')}</span>
+							</div>
 						</div>
 
-						<div class="wallee-form-group">
+						<div class="wallee-form-group" style="margin-top: 20px;">
 							<label>${__('User ID')} <span class="required">*</span></label>
-							<input type="text" id="user_id" placeholder="67890" class="user-id-input">
+							<input type="text" id="user_id" placeholder="67890" class="user-id-input" autocomplete="off">
 							<div class="help-text">${__('The ID of your Application User (shown next to the name)')}</div>
 						</div>
 
 						<div class="wallee-form-group">
 							<label>${__('Authentication Key')} <span class="required">*</span></label>
-							<input type="password" id="authentication_key" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="auth-key-input">
+							<input type="password" id="authentication_key" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" class="auth-key-input" autocomplete="new-password">
 							<div class="help-text">${__('The secret key generated - copy it before closing the dialog!')}</div>
 						</div>
 					</div>
@@ -191,47 +290,32 @@ class WalleeSetupWizard {
 
 						<div class="wallee-instructions">
 							<h4>${__('Assign the Account Admin Role')}</h4>
-							<ol>
-								<li>${__('On the Application User page, find the')} <strong>${__('Roles')}</strong> ${__('section on the right')}</li>
-								<li>${__('Click')} <strong>${__('Manage')}</strong></li>
-							</ol>
+							<p style="margin: 0; font-size: 13px;">${__('Give your Application User the necessary permissions to create transactions:')}</p>
 						</div>
 
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee_page_user_app.png" alt="Application User Page">
-							<div class="wallee-screenshot-caption">${__('Find the "Roles" section and click "Manage"')}</div>
+						<div class="config-help-steps">
+							<div class="help-step" data-step="1">
+								<span class="step-number">1</span>
+								<span class="step-text">${__('On the Application User page, find the "Roles" section on the right and click "Manage"')}</span>
+								<img class="help-img" src="/assets/wallee_integration/images/wallee_page_user_app.png" alt="Roles section">
+							</div>
+							<div class="help-step" data-step="2">
+								<span class="step-number">2</span>
+								<span class="step-text">${__('Click the "+" button next to "Rôles de l\'Account" to add a role')}</span>
+								<img class="help-img" src="/assets/wallee_integration/images/wallee_add_role.png" alt="Add role">
+							</div>
+							<div class="help-step" data-step="3">
+								<span class="step-number">3</span>
+								<span class="step-text">${__('Select your account in "Contexte", then select "Account Admin (ID: 2)" in "Rôles"')}</span>
+								<img class="help-img" src="/assets/wallee_integration/images/wallee_dialog_add_role.png" alt="Select role">
+							</div>
+							<div class="help-step" data-step="4">
+								<span class="step-number">4</span>
+								<span class="step-text">${__('Click "Assign roles", then click "Save roles" (blue button at the top). You will need to re-enter your password to confirm.')}</span>
+							</div>
 						</div>
 
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee_add_role.png" alt="Roles Section">
-							<div class="wallee-screenshot-caption">${__('Click on "+" next to "Rôles de l\'Account" to add a role')}</div>
-						</div>
-
-						<div class="wallee-instructions">
-							<h4>${__('Add the Role')}</h4>
-							<ol>
-								<li>${__('Click the')} <strong>+</strong> ${__('button next to "Rôles de l\'Account"')}</li>
-								<li>${__('Select your account in "Contexte"')}</li>
-								<li>${__('In "Rôles", select')} <code>Account Admin (ID: 2)</code></li>
-								<li>${__('Click')} <strong>${__('Assign roles')}</strong></li>
-							</ol>
-						</div>
-
-						<div class="wallee-screenshot">
-							<img src="/assets/wallee_integration/images/wallee_dialog_add_role.png" alt="Add Role Dialog">
-							<div class="wallee-screenshot-caption">${__('Select Account Admin (ID: 2) in the Roles field')}</div>
-						</div>
-
-						<div class="wallee-instructions" style="background: var(--yellow-50, #fefce8); border-color: var(--yellow-300, #fde047);">
-							<h4 style="color: var(--yellow-700, #a16207);">${__('Important: Save the Roles')}</h4>
-							<ol>
-								<li>${__('Click')} <strong>${__('Save roles')}</strong> ${__('(blue button at the top)')}</li>
-								<li>${__('You will be asked to re-enter your password to confirm')}</li>
-								<li>${__('The Account Admin role gives full access to all Spaces in the account')}</li>
-							</ol>
-						</div>
-
-						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd);">
+						<div class="wallee-instructions" style="background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd); margin-top: 15px;">
 							<h4 style="color: var(--blue-700, #1d4ed8);">${__('Note')}</h4>
 							<p style="margin: 0; font-size: 13px; color: var(--text-color);">
 								${__('You only need to add the role at the Account level. This automatically grants permissions to all Spaces and Subaccounts.')}
@@ -354,6 +438,32 @@ class WalleeSetupWizard {
 		// Test connection
 		this.$content.find('#test-connection-btn').on('click', () => this.test_connection());
 
+		// Screenshot click - open dialog with enlarged image
+		this.$content.on('click', '.wallee-screenshot', function() {
+			const $screenshot = $(this);
+			const imgSrc = $screenshot.find('img').attr('src');
+			const caption = $screenshot.find('.wallee-screenshot-caption').text();
+			if (imgSrc) {
+				showHelpImageDialog(imgSrc, null, caption);
+			}
+		});
+
+		// Help step click - open dialog with step info and image (only if has image)
+		this.$content.on('click', '.help-step', function(e) {
+			// Don't open dialog if clicking on a button or link
+			if ($(e.target).hasClass('help-btn') || $(e.target).closest('.help-btn').length) {
+				return;
+			}
+			const $step = $(this);
+			const imgSrc = $step.find('.help-img').attr('src');
+			// Only open dialog if there's an image
+			if (imgSrc) {
+				const stepNumber = $step.data('step');
+				const stepText = $step.find('.step-text').text();
+				showHelpImageDialog(imgSrc, stepNumber, stepText);
+			}
+		});
+
 		// Feature checkboxes
 		this.$content.find('.wallee-feature-item').on('click', function(e) {
 			if (e.target.tagName !== 'INPUT') {
@@ -384,13 +494,21 @@ class WalleeSetupWizard {
 
 	update_app_user_link() {
 		const accountId = this.$content.find('#account_id').val().trim();
-		const container = this.$content.find('#app-user-link-container');
+		const link = this.$content.find('#open-app-users-link');
 
-		if (accountId) {
+		if (accountId && link.length) {
 			const url = `https://app-wallee.com/a/${accountId}/user/application/list`;
-			container.html(`<br><a href="${url}" target="_blank" class="btn btn-xs btn-primary" style="margin-top: 5px;">${__('Open Application Users')} →</a>`);
-		} else {
-			container.html('');
+			link.attr('href', url);
+		}
+	}
+
+	update_spaces_link() {
+		const accountId = this.$content.find('#account_id').val().trim();
+		const link = this.$content.find('#open-wallee-spaces-link');
+
+		if (accountId && link.length) {
+			const url = `https://app-wallee.com/a/${accountId}/account/dashboard`;
+			link.attr('href', url);
 		}
 	}
 
@@ -579,6 +697,11 @@ class WalleeSetupWizard {
 		if (this.currentStep < this.totalSteps) {
 			this.currentStep++;
 			this.show_step(this.currentStep);
+
+			// When entering step 2, update the Wallee Spaces link with account ID
+			if (this.currentStep === 2) {
+				this.update_spaces_link();
+			}
 
 			// When entering step 3, update the Application User link
 			if (this.currentStep === 3) {
@@ -853,18 +976,47 @@ class WalleeSetupWizard {
 
 			successDetails += '<br><br>' + __('You can now accept payments.');
 
-			// Success!
-			frappe.msgprint({
+			// Build custom dialog with multiple actions
+			const dialog = new frappe.ui.Dialog({
 				title: __('Setup Complete!'),
-				message: successDetails,
 				indicator: 'green',
-				primary_action: {
-					label: __('Go to Wallee Settings'),
-					action: () => {
-						frappe.set_route('Form', 'Wallee Settings');
+				fields: [
+					{
+						fieldtype: 'HTML',
+						options: `<div style="margin-bottom: 15px;">${successDetails}</div>`
 					}
-				}
+				]
 			});
+
+			// Primary action based on POS Terminal setting
+			if (this.wizardData.enable_pos_terminal) {
+				dialog.set_primary_action(__('Configure Terminals'), () => {
+					window.open(frappe.urllib.get_full_url('/app/wallee-terminal-wizard'), '_blank');
+				});
+
+				dialog.set_secondary_action_label(__('Wallee Settings'));
+				dialog.$wrapper.find('.btn-modal-secondary').on('click', () => {
+					window.open(frappe.urllib.get_full_url('/app/Form/Wallee%20Settings'), '_blank');
+				});
+			} else {
+				dialog.set_primary_action(__('Go to Wallee Settings'), () => {
+					window.open(frappe.urllib.get_full_url('/app/Form/Wallee%20Settings'), '_blank');
+				});
+			}
+
+			// Add "Restart Wizard" button in the footer
+			dialog.$wrapper.find('.modal-footer').append(`
+				<button class="btn btn-default btn-restart-wizard" style="margin-left: 10px;">
+					${__('Restart Wizard')}
+				</button>
+			`);
+
+			dialog.$wrapper.find('.btn-restart-wizard').on('click', () => {
+				dialog.hide();
+				window.location.reload();
+			});
+
+			dialog.show();
 
 		} catch (e) {
 			frappe.msgprint({

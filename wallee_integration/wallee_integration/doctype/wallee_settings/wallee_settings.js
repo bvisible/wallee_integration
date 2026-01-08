@@ -46,6 +46,10 @@ frappe.ui.form.on('Wallee Settings', {
             frm.add_custom_button(__('Sync Terminals'), function() {
                 sync_terminals();
             }, __('Actions'));
+
+            frm.add_custom_button(__('Terminal Wizard'), function() {
+                frappe.set_route('wallee-terminal-wizard');
+            }, __('Actions'));
         }
 
         // Display connection status
@@ -275,3 +279,10 @@ function setup_webshop_integration(frm) {
 
     d.show();
 }
+
+// Button field handler
+frappe.ui.form.on('Wallee Settings', {
+    btn_terminal_wizard: function(frm) {
+        frappe.set_route('wallee-terminal-wizard');
+    }
+});
