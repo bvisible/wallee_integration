@@ -383,6 +383,35 @@ def search_transactions(filters=None, page=0, size=20):
         raise
 
 
+def debug_transaction_attributes(transaction_id):
+    """
+    Debug function to log all transaction attributes from Wallee API.
+    """
+    from wallee import TransactionsService
+
+    config = get_wallee_client()
+    space_id = get_space_id()
+    service = TransactionsService(config)
+
+    tx = service.get_payment_transactions_id(int(transaction_id), space_id)
+
+    attrs = {}
+    for attr in sorted(dir(tx)):
+        if not attr.startswith('_'):
+            val = getattr(tx, attr, None)
+            if val is not None and not callable(val):
+                # Convert to string representation
+                val_str = repr(val)
+                if len(val_str) > 500:
+                    val_str = val_str[:500] + "..."
+                attrs[attr] = val_str
+
+    import json
+    result = json.dumps(attrs, indent=2, default=str)
+    frappe.log_error("Wallee TX Debug", result[:10000])
+    return attrs
+
+
 def get_transaction_completions(transaction_id):
     """
     Get completions for a transaction.
