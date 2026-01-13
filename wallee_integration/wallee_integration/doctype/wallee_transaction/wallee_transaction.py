@@ -117,20 +117,35 @@ def update_transaction_from_wallee(doc, tx):
     """
     # Helper to safely get attribute from object or dict
     def get_attr(obj, attr, default=None):
+        if obj is None:
+            return default
         if hasattr(obj, attr):
             return getattr(obj, attr, default)
         elif isinstance(obj, dict):
             return obj.get(attr, default)
         return default
 
+    # Helper to get enum value
+    def get_enum_value(val):
+        if val is None:
+            return None
+        if hasattr(val, "value"):
+            return val.value
+        return str(val)
+
+    # Helper to convert timezone-aware datetime to naive (MariaDB compatible)
+    def to_naive_datetime(dt):
+        if dt is None:
+            return None
+        if hasattr(dt, "replace") and hasattr(dt, "tzinfo") and dt.tzinfo is not None:
+            return dt.replace(tzinfo=None)
+        return dt
+
     # Update status - access state attribute directly
     wallee_status = ""
     state = get_attr(tx, "state")
     if state:
-        if hasattr(state, "value"):
-            wallee_status = state.value.upper()
-        else:
-            wallee_status = str(state).upper()
+        wallee_status = get_enum_value(state).upper() if state else ""
 
     new_status = STATUS_MAP.get(wallee_status, doc.status)
 
@@ -169,15 +184,55 @@ def update_transaction_from_wallee(doc, tx):
     # Update authorization environment
     auth_env = get_attr(tx, "authorization_environment")
     if auth_env:
-        doc.authorization_environment = str(auth_env.value if hasattr(auth_env, "value") else auth_env)
+        doc.authorization_environment = get_enum_value(auth_env)
 
-    # Update payment method info
+    # Update payment connector info
     payment_connector = get_attr(tx, "payment_connector_configuration")
     if payment_connector:
-        if isinstance(payment_connector, dict):
-            doc.payment_connector = payment_connector.get("name")
-        elif hasattr(payment_connector, "name"):
-            doc.payment_connector = payment_connector.name
+        connector_id = get_attr(payment_connector, "id")
+        connector_name = get_attr(payment_connector, "name")
+        doc.payment_connector = connector_name or (f"Connector #{connector_id}" if connector_id else None)
+
+    # Update terminal info
+    terminal_obj = get_attr(tx, "terminal")
+    if terminal_obj:
+        terminal_id = get_attr(terminal_obj, "id")
+        if terminal_id:
+            doc.terminal_id = int(terminal_id)
+        terminal_name = get_attr(terminal_obj, "name") or get_attr(terminal_obj, "device_name")
+        if terminal_name and not doc.terminal:
+            # Try to find matching terminal in our system
+            existing_terminal = frappe.db.get_value(
+                "Wallee Payment Terminal",
+                {"terminal_id": terminal_id},
+                "name"
+            )
+            if existing_terminal:
+                doc.terminal = existing_terminal
+
+    # Update user interface type (Terminal, Payment Page, etc.)
+    ui_type = get_attr(tx, "user_interface_type")
+    if ui_type:
+        ui_value = get_enum_value(ui_type)
+        if ui_value == "TERMINAL":
+            doc.is_terminal_transaction = 1
+            if doc.transaction_type != "Terminal":
+                doc.transaction_type = "Terminal"
+
+    # Update customer info
+    customer_email = get_attr(tx, "customer_email_address")
+    if customer_email:
+        doc.email = customer_email
+
+    # Update merchant reference if not set
+    merchant_ref = get_attr(tx, "merchant_reference")
+    if merchant_ref and not doc.merchant_reference:
+        doc.merchant_reference = merchant_ref
+
+    # Update external ID
+    external_id = get_attr(tx, "meta_data")
+    if external_id and isinstance(external_id, dict):
+        doc.external_id = external_id.get("externalId") or external_id.get("external_id")
 
     # Update card details from payment method data
     _update_card_details(doc, tx)
@@ -188,31 +243,39 @@ def update_transaction_from_wallee(doc, tx):
     # Update line items
     _update_line_items(doc, tx)
 
-    # Helper to convert timezone-aware datetime to naive (MariaDB compatible)
-    def to_naive_datetime(dt):
-        if dt is None:
-            return None
-        if hasattr(dt, "replace") and hasattr(dt, "tzinfo") and dt.tzinfo is not None:
-            # Remove timezone info - convert to naive datetime
-            return dt.replace(tzinfo=None)
-        return dt
+    # Update timestamps from Wallee (more accurate than local time)
+    authorized_on = get_attr(tx, "authorized_on")
+    if authorized_on and (new_status == "Authorized" or doc.authorized_amount):
+        doc.authorized_on = to_naive_datetime(authorized_on)
 
-    # Update timestamps
-    if new_status == "Authorized" and not doc.authorized_on:
-        doc.authorized_on = now_datetime()
-    elif new_status in ["Completed", "Fulfill"] and not doc.completed_on:
-        completed_on = get_attr(tx, "completed_on")
-        doc.completed_on = to_naive_datetime(completed_on) or now_datetime()
-    elif new_status == "Voided" and not doc.voided_on:
+    completed_on = get_attr(tx, "completed_on")
+    if completed_on and new_status in ["Completed", "Fulfill"]:
+        doc.completed_on = to_naive_datetime(completed_on)
+
+    if new_status == "Voided" and not doc.voided_on:
         doc.voided_on = now_datetime()
 
-    # Store minimal raw data for debugging (to_dict() truncates, so store key fields)
+    # Store comprehensive raw data for debugging
     raw_data = {
-        "state": str(get_attr(tx, "state")),
+        "id": get_attr(tx, "id"),
+        "state": get_enum_value(get_attr(tx, "state")),
         "authorization_amount": get_attr(tx, "authorization_amount"),
         "completed_amount": get_attr(tx, "completed_amount"),
         "refunded_amount": get_attr(tx, "refunded_amount"),
-        "id": get_attr(tx, "id"),
+        "total_applied_fees": get_attr(tx, "total_applied_fees"),
+        "total_settled_amount": get_attr(tx, "total_settled_amount"),
+        "authorization_environment": get_enum_value(get_attr(tx, "authorization_environment")),
+        "user_interface_type": get_enum_value(get_attr(tx, "user_interface_type")),
+        "customers_presence": get_enum_value(get_attr(tx, "customers_presence")),
+        "merchant_reference": get_attr(tx, "merchant_reference"),
+        "invoice_merchant_reference": get_attr(tx, "invoice_merchant_reference"),
+        "currency": get_attr(tx, "currency"),
+        "created_on": str(get_attr(tx, "created_on")) if get_attr(tx, "created_on") else None,
+        "authorized_on": str(get_attr(tx, "authorized_on")) if get_attr(tx, "authorized_on") else None,
+        "completed_on": str(get_attr(tx, "completed_on")) if get_attr(tx, "completed_on") else None,
+        "terminal_id": get_attr(get_attr(tx, "terminal"), "id") if get_attr(tx, "terminal") else None,
+        "payment_connector_id": get_attr(get_attr(tx, "payment_connector_configuration"), "id") if get_attr(tx, "payment_connector_configuration") else None,
+        "version": get_attr(tx, "version"),
     }
     doc.wallee_data = frappe.as_json(raw_data)
 
