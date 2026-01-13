@@ -208,6 +208,84 @@ service = TransactionsService(config)
 # Make test API call
 ```
 
+## Terminal Payment Testing
+
+### Debug/QAT Terminal Test Amounts
+When using a **debug terminal** (QAT - Quality Assurance Test), the transaction result is controlled by the amount:
+
+| Amount (CHF) | Result |
+|--------------|--------|
+| 1.00 | Declined |
+| 2.00 | Declined |
+| 1.01 | Card Error |
+| 1.02 | Card Expired |
+| 1.03 | Card Unknown |
+| 1.09 | System Error |
+| 1.28 | PIN Required |
+| 11.30 | PIN Required, Restart |
+| 6.66 | Declined, Autoreversal OK |
+| 9.97 | Declined |
+| 9.98-9.99 | Declined, Autoreversal OK |
+| **3.00-9.00** | **Approved** |
+| 20.15 | Confirm Amount, Approved |
+| 20.16 | PIN Required, Cardholder ID |
+| 20.17+ | Declined |
+
+**Use amounts between 3.00 and 9.00 CHF for successful test transactions.**
+
+### Terminal Transaction Flow
+1. Create transaction with `auto_confirm=False` (required for terminal)
+2. Call `initiate_terminal_transaction(terminal_id, transaction_id)`
+3. Terminal displays payment screen
+4. Customer presents card
+5. Transaction state changes to AUTHORIZED → COMPLETED
+
+### Line Items for Terminal Transactions
+**IMPORTANT**: When creating line items, use `amount_including_tax`, not `amount`:
+
+```python
+# CORRECT
+line_items = [{
+    "name": "Product Name",
+    "quantity": 1,
+    "amount_including_tax": 5.00,  # ✓ Correct field name
+    "unique_id": "unique-id-123"
+}]
+
+# WRONG - will result in 0.00 amount!
+line_items = [{
+    "name": "Product Name",
+    "quantity": 1,
+    "amount": 5.00,  # ✗ Wrong field name - defaults to 0
+    "unique_id": "unique-id-123"
+}]
+```
+
+### Testing Terminal Payment via API
+```python
+from wallee_integration.wallee_integration.api.transaction import create_transaction
+from wallee_integration.wallee_integration.api.terminal import initiate_terminal_transaction
+
+# Create transaction (use amount 5.00 for approved result on debug terminal)
+line_items = [{
+    "name": "Test Payment",
+    "quantity": 1,
+    "amount_including_tax": 5.00,
+    "unique_id": "test-123"
+}]
+
+tx = create_transaction(
+    line_items=line_items,
+    currency="CHF",
+    merchant_reference="TEST-001",
+    auto_confirm=False  # Required for terminal!
+)
+
+# Send to terminal (use Terminal ID, not identifier)
+result = initiate_terminal_transaction(304079, tx["transaction_id"])
+# Terminal now displays payment screen
+```
+
 ## Important Notes
 
 1. **Credentials Security**: Authentication key is stored as Password field (encrypted)
@@ -215,6 +293,55 @@ service = TransactionsService(config)
 3. **Webhook Verification**: Uses HMAC-SHA256 signature verification
 4. **Error Logging**: Enable `log_api_calls` in settings for debugging
 5. **Dependencies**: wallee SDK has version conflicts with Frappe - minor version mismatches are acceptable
+6. **Terminal Transactions**: Must use `auto_confirm=False` when creating transactions for terminal processing
+7. **Terminal ID vs Identifier**: Use `terminal_id` (e.g., 304079) not `identifier` (e.g., 32580758) for API calls
+8. **Line Items**: Use `amount_including_tax` (or `amount` as alias) - the field name matters!
+
+## Coding Conventions
+
+### frappe.log_error Usage
+**IMPORTANT**: Always use `title` as the FIRST argument when calling `frappe.log_error()`:
+```python
+# CORRECT - title first, then message
+frappe.log_error(
+    title="Short Error Title",  # Limited to 140 characters!
+    message=f"Detailed error message: {error}"
+)
+
+# WRONG - don't put message first
+frappe.log_error(
+    message=f"...",
+    title="..."
+)
+```
+The `title` field in Error Log DocType is limited to **140 characters**. Keep titles short and descriptive.
+
+## Dangerous Functions - ASK USER BEFORE RUNNING
+
+### reset_wallee_data()
+**Location:** `wallee_integration/wallee_integration/api/terminal.py`
+
+**ALWAYS ASK USER CONFIRMATION BEFORE RUNNING THIS FUNCTION!**
+
+Complete reset of ALL Wallee-related data. Deletes:
+- All terminals from Wallee API (sets to DECOMMISSIONED state)
+- ERPNext DocTypes: Wallee Payment Terminal, Terminal Configuration, Location
+- Wallee Transaction and Transaction Item records
+- Wallee Webhook Log records
+- Payment Gateway, Payment Gateway Account (Wallee-related)
+- Payment Requests linked to Wallee
+- Resets ALL Wallee Settings fields (user_id, space_id, authentication_key, etc.)
+
+```python
+# Usage - ONLY after user confirmation
+bench --site [site] execute wallee_integration.wallee_integration.api.terminal.reset_wallee_data
+
+# Parameters:
+# - include_transactions: Also delete Wallee Transaction records (default: True)
+# - include_payment_gateway: Also delete Payment Gateway related (default: True)
+```
+
+**Note:** Wallee API terminals go to DECOMMISSIONED state (not truly deleted). They will be purged automatically by Wallee after the `planned_purge_date`. If using a NEW Wallee account with different credentials, update Wallee Settings first and the new space will be empty.
 
 ## Related Projects
 

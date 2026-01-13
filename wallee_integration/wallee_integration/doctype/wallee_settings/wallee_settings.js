@@ -50,6 +50,10 @@ frappe.ui.form.on('Wallee Settings', {
             frm.add_custom_button(__('Terminal Wizard'), function() {
                 frappe.set_route('wallee-terminal-wizard');
             }, __('Actions'));
+
+            frm.add_custom_button(__('Test Terminal Transaction'), function() {
+                show_test_terminal_dialog(frm);
+            }, __('Actions'));
         }
 
         // Display connection status
@@ -286,3 +290,217 @@ frappe.ui.form.on('Wallee Settings', {
         frappe.set_route('wallee-terminal-wizard');
     }
 });
+
+function show_test_terminal_dialog(frm) {
+    // Dialog to test terminal transaction
+    let d = new frappe.ui.Dialog({
+        title: __('Test Terminal Transaction'),
+        size: 'small',
+        fields: [
+            {
+                fieldtype: 'HTML',
+                fieldname: 'intro_html',
+                options: `
+                    <div class="alert alert-info" style="margin-bottom: 15px;">
+                        <strong>${__('Debug Terminal Test Amounts')}</strong><br>
+                        <small>
+                            ${__('3.00-9.00 CHF = Approved')}<br>
+                            ${__('1.00-2.00 CHF = Declined')}<br>
+                            ${__('Use 5.00 CHF for a successful test')}
+                        </small>
+                    </div>
+                `
+            },
+            {
+                label: __('Terminal'),
+                fieldname: 'terminal',
+                fieldtype: 'Link',
+                options: 'Wallee Payment Terminal',
+                reqd: 1,
+                default: frm.doc.default_terminal,
+                get_query: function() {
+                    return {
+                        filters: {
+                            'status': 'Active'
+                        }
+                    };
+                }
+            },
+            {
+                label: __('Amount'),
+                fieldname: 'amount',
+                fieldtype: 'Currency',
+                reqd: 1,
+                default: 5.00,
+                description: __('Use 5.00 for approved, 1.00 for declined')
+            },
+            {
+                label: __('Currency'),
+                fieldname: 'currency',
+                fieldtype: 'Link',
+                options: 'Currency',
+                default: 'CHF',
+                reqd: 1
+            },
+            {
+                fieldtype: 'Section Break'
+            },
+            {
+                fieldtype: 'HTML',
+                fieldname: 'status_html',
+                options: '<div id="terminal-test-status"></div>'
+            }
+        ],
+        primary_action_label: __('Send to Terminal'),
+        primary_action: function(values) {
+            initiate_test_terminal_transaction(d, values);
+        }
+    });
+
+    d.show();
+}
+
+function initiate_test_terminal_transaction(dialog, values) {
+    // Get terminal_id from the selected terminal
+    frappe.db.get_value('Wallee Payment Terminal', values.terminal, 'terminal_id')
+        .then(r => {
+            if (!r.message || !r.message.terminal_id) {
+                frappe.msgprint(__('Terminal ID not found. Please sync terminals first.'));
+                return;
+            }
+
+            const terminal_id = r.message.terminal_id;
+            const status_div = dialog.$wrapper.find('#terminal-test-status');
+
+            // Update status
+            status_div.html(`
+                <div class="alert alert-warning">
+                    <i class="fa fa-spinner fa-spin"></i> ${__('Creating transaction...')}
+                </div>
+            `);
+
+            // Disable primary button
+            dialog.get_primary_btn().prop('disabled', true);
+
+            // Call API to create and initiate terminal transaction
+            frappe.call({
+                method: 'wallee_integration.wallee_integration.api.pos.initiate_terminal_payment',
+                args: {
+                    amount: values.amount,
+                    currency: values.currency,
+                    terminal: values.terminal
+                },
+                callback: function(r) {
+                    if (r.exc) {
+                        status_div.html(`
+                            <div class="alert alert-danger">
+                                <strong>${__('Error')}</strong><br>
+                                ${r.exc}
+                            </div>
+                        `);
+                        dialog.get_primary_btn().prop('disabled', false);
+                        return;
+                    }
+
+                    if (r.message && r.message.transaction_name) {
+                        status_div.html(`
+                            <div class="alert alert-info">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                ${__('Transaction sent to terminal. Waiting for response...')}<br>
+                                <small>Transaction: ${r.message.transaction_name}</small>
+                            </div>
+                        `);
+
+                        // Start polling for status
+                        poll_terminal_status(dialog, r.message.transaction_name, status_div);
+                    } else if (r.message && r.message.error) {
+                        status_div.html(`
+                            <div class="alert alert-danger">
+                                <strong>${__('Error')}</strong><br>
+                                ${r.message.error}
+                            </div>
+                        `);
+                        dialog.get_primary_btn().prop('disabled', false);
+                    }
+                },
+                error: function(r) {
+                    status_div.html(`
+                        <div class="alert alert-danger">
+                            <strong>${__('Error')}</strong><br>
+                            ${__('Failed to initiate terminal transaction')}
+                        </div>
+                    `);
+                    dialog.get_primary_btn().prop('disabled', false);
+                }
+            });
+        });
+}
+
+function poll_terminal_status(dialog, transaction_name, status_div, attempts = 0) {
+    const max_attempts = 60; // 2 minutes with 2-second interval
+    const poll_interval = 2000;
+
+    if (attempts >= max_attempts) {
+        status_div.html(`
+            <div class="alert alert-warning">
+                <strong>${__('Timeout')}</strong><br>
+                ${__('Transaction is still processing. Check the terminal.')}
+            </div>
+        `);
+        dialog.get_primary_btn().prop('disabled', false);
+        return;
+    }
+
+    frappe.call({
+        method: 'wallee_integration.wallee_integration.api.pos.check_terminal_payment_status',
+        args: {
+            transaction_name: transaction_name
+        },
+        callback: function(r) {
+            if (r.message) {
+                const status = r.message.status;
+                const wallee_state = r.message.wallee_state;
+
+                if (status === 'Completed' || status === 'Authorized') {
+                    status_div.html(`
+                        <div class="alert alert-success">
+                            <strong><i class="fa fa-check"></i> ${__('Success!')}</strong><br>
+                            ${__('Transaction')}: ${transaction_name}<br>
+                            ${__('Status')}: ${status}<br>
+                            ${__('Amount')}: ${r.message.amount} ${r.message.currency}
+                        </div>
+                    `);
+                    dialog.get_primary_btn().prop('disabled', false);
+                    dialog.set_primary_action(__('Close'), () => dialog.hide());
+                } else if (status === 'Failed' || status === 'Decline' || status === 'Voided') {
+                    status_div.html(`
+                        <div class="alert alert-danger">
+                            <strong><i class="fa fa-times"></i> ${__('Transaction Failed')}</strong><br>
+                            ${__('Status')}: ${status}<br>
+                            ${r.message.failure_reason ? __('Reason') + ': ' + r.message.failure_reason : ''}
+                        </div>
+                    `);
+                    dialog.get_primary_btn().prop('disabled', false);
+                } else {
+                    // Still processing - continue polling
+                    status_div.html(`
+                        <div class="alert alert-info">
+                            <i class="fa fa-spinner fa-spin"></i>
+                            ${__('Waiting for terminal response...')}<br>
+                            <small>${__('Status')}: ${status || wallee_state || 'Processing'}</small>
+                        </div>
+                    `);
+                    setTimeout(() => {
+                        poll_terminal_status(dialog, transaction_name, status_div, attempts + 1);
+                    }, poll_interval);
+                }
+            }
+        },
+        error: function() {
+            // Continue polling on error
+            setTimeout(() => {
+                poll_terminal_status(dialog, transaction_name, status_div, attempts + 1);
+            }, poll_interval);
+        }
+    });
+}

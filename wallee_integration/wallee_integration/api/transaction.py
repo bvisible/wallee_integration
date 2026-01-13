@@ -52,10 +52,13 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
             elif type_str == "FEE":
                 item_type = LineItemType.FEE
 
+            # Support both "amount_including_tax" and "amount" as field names
+            item_amount = item.get("amount_including_tax") or item.get("amount", 0)
+
             line_item = LineItemCreate(
                 name=item.get("name"),
                 quantity=float(item.get("quantity", 1)),
-                amount_including_tax=float(item.get("amount_including_tax", 0)),
+                amount_including_tax=float(item_amount),
                 unique_id=item.get("unique_id") or item.get("sku") or str(frappe.generate_hash()[:8]),
                 type=item_type,
                 sku=item.get("sku")
