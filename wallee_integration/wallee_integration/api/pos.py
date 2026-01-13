@@ -120,7 +120,7 @@ def check_terminal_payment_status(transaction_name):
 	Returns:
 		Current payment status
 	"""
-	from wallee_integration.wallee_integration.api.transaction import get_transaction_status
+	from wallee_integration.wallee_integration.api.transaction import get_full_transaction
 	from wallee_integration.wallee_integration.doctype.wallee_transaction.wallee_transaction import (
 		update_transaction_from_wallee
 	)
@@ -135,8 +135,10 @@ def check_terminal_payment_status(transaction_name):
 		}
 
 	try:
-		status_data = get_transaction_status(doc.transaction_id)
-		update_transaction_from_wallee(doc, status_data)
+		# Use get_full_transaction to get the complete Transaction object
+		# (not get_transaction_status which returns a dict)
+		wallee_tx = get_full_transaction(doc.transaction_id)
+		update_transaction_from_wallee(doc, wallee_tx)
 		doc.reload()
 
 		return {
@@ -144,13 +146,15 @@ def check_terminal_payment_status(transaction_name):
 			"transaction_name": doc.name,
 			"transaction_id": doc.transaction_id,
 			"status": doc.status,
+			"wallee_state": str(wallee_tx.state.value) if wallee_tx.state else None,
 			"amount": doc.amount,
 			"currency": doc.currency,
-			"completed": doc.status == "Completed",
-			"failed": doc.status == "Failed",
+			"completed": doc.status in ["Completed", "Fulfill"],
+			"failed": doc.status in ["Failed", "Decline", "Voided"],
 			"failure_reason": doc.failure_reason
 		}
 	except Exception as e:
+		frappe.log_error("Terminal Status Check Error", f"Transaction: {transaction_name}, Error: {str(e)}")
 		return {
 			"success": False,
 			"status": doc.status,

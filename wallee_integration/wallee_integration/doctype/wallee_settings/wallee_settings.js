@@ -461,7 +461,7 @@ function poll_terminal_status(dialog, transaction_name, status_div, attempts = 0
                 const status = r.message.status;
                 const wallee_state = r.message.wallee_state;
 
-                if (status === 'Completed' || status === 'Authorized') {
+                if (status === 'Completed' || status === 'Authorized' || status === 'Fulfill') {
                     status_div.html(`
                         <div class="alert alert-success">
                             <strong><i class="fa fa-check"></i> ${__('Success!')}</strong><br>
