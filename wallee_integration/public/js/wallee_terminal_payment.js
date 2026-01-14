@@ -535,8 +535,21 @@ wallee_integration.create_till_connection = async function(transactionName, dial
         });
 
         tillConnection.subscribe('canceled', function() {
-            console.log('Till: Transaction canceled');
+            console.log('Till: Transaction canceled via WebSocket');
             dialog.wallee_polling_active = false;
+            dialog.wallee_canceled_by_websocket = true;
+
+            // Show success message immediately
+            const statusDiv = dialog.$wrapper.find('.wallee-payment-status');
+            statusDiv.html(`
+                <div class="alert alert-warning">
+                    <i class="fa fa-ban"></i>
+                    <strong>${__('Payment Cancelled')}</strong><br>
+                    ${__('The payment was cancelled on the terminal.')}
+                </div>
+            `);
+            dialog.enable_primary_action();
+            if (config.on_cancel) config.on_cancel();
         });
 
         tillConnection.subscribe('error', function(error) {
@@ -572,6 +585,7 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
     dialog.wallee_current_transaction = null;
     dialog.wallee_till_connection = null;
     dialog.wallee_polling_active = true;
+    dialog.wallee_canceled_by_websocket = false;
 
     // Show status
     statusDiv.show().html(`
@@ -774,45 +788,66 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     currency: config.currency,
                     status: status
                 });
-            } else if (status === 'Voided') {
+            } else if (status === 'Voided' || dialog.wallee_canceled_by_websocket) {
                 // Voided = cancelled by user - cleanup WebSocket connection
                 if (dialog.wallee_till_connection) {
                     dialog.wallee_till_connection = null;
                 }
 
-                statusDiv.html(`
-                    <div class="alert alert-warning">
-                        <i class="fa fa-ban"></i>
-                        <strong>${__('Payment Cancelled')}</strong><br>
-                        ${__('The payment was cancelled.')}
-                    </div>
-                `);
-                dialog.enable_primary_action();
-                config.on_cancel();
+                // Only show message if not already shown by WebSocket
+                if (!dialog.wallee_canceled_by_websocket) {
+                    statusDiv.html(`
+                        <div class="alert alert-warning">
+                            <i class="fa fa-ban"></i>
+                            <strong>${__('Payment Cancelled')}</strong><br>
+                            ${__('The payment was cancelled.')}
+                        </div>
+                    `);
+                    dialog.enable_primary_action();
+                    config.on_cancel();
+                }
             } else if (status === 'Failed' || status === 'Decline') {
-                // Failed - cleanup WebSocket connection
+                // Check if this is actually a user cancel (WebSocket or failure_reason contains cancel)
+                const failureReason = result.message.failure_reason || '';
+                const isCanceled = dialog.wallee_canceled_by_websocket ||
+                                   failureReason.toLowerCase().includes('cancel');
+
+                // Cleanup WebSocket connection
                 if (dialog.wallee_till_connection) {
                     dialog.wallee_till_connection = null;
                 }
 
-                // Extract clean error message
-                const failureReason = result.message.failure_reason
-                    ? wallee_integration.extract_error_message({ message: result.message.failure_reason })
-                    : __('The payment was declined.');
+                if (isCanceled) {
+                    // User cancelled - show cancel message
+                    statusDiv.html(`
+                        <div class="alert alert-warning">
+                            <i class="fa fa-ban"></i>
+                            <strong>${__('Payment Cancelled')}</strong><br>
+                            ${__('The payment was cancelled.')}
+                        </div>
+                    `);
+                    dialog.enable_primary_action();
+                    config.on_cancel();
+                } else {
+                    // Real failure
+                    const cleanError = failureReason
+                        ? wallee_integration.extract_error_message({ message: failureReason })
+                        : __('The payment was declined.');
 
-                statusDiv.html(`
-                    <div class="alert alert-danger">
-                        <i class="fa fa-times-circle"></i>
-                        <strong>${__('Payment Failed')}</strong><br>
-                        ${failureReason}
-                    </div>
-                `);
-                dialog.enable_primary_action();
-                config.on_failure({
-                    transaction_name: transactionName,
-                    status: status,
-                    reason: failureReason
-                });
+                    statusDiv.html(`
+                        <div class="alert alert-danger">
+                            <i class="fa fa-times-circle"></i>
+                            <strong>${__('Payment Failed')}</strong><br>
+                            ${cleanError}
+                        </div>
+                    `);
+                    dialog.enable_primary_action();
+                    config.on_failure({
+                        transaction_name: transactionName,
+                        status: status,
+                        reason: cleanError
+                    });
+                }
             } else {
                 // Still processing - show status with cancel button
                 statusDiv.html(`
