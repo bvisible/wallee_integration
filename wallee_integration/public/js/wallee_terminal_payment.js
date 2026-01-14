@@ -361,7 +361,88 @@ wallee_integration.update_terminal_info = async function(dialog, terminalName) {
 wallee_integration.extract_error_message = function(error) {
     if (!error) return __('Unknown error');
 
-    let msg = error.message || String(error);
+    let msg = '';
+
+    // Handle different error formats
+    if (typeof error === 'string') {
+        msg = error;
+    } else if (error instanceof Error) {
+        msg = error.message || error.toString();
+    } else if (typeof error === 'object') {
+        // Frappe server error format
+        if (error._server_messages) {
+            try {
+                const serverMsgs = JSON.parse(error._server_messages);
+                if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
+                    const parsed = JSON.parse(serverMsgs[0]);
+                    msg = parsed.message || parsed;
+                } else if (typeof serverMsgs === 'string') {
+                    msg = serverMsgs;
+                }
+            } catch (e) {
+                msg = String(error._server_messages);
+            }
+        }
+        // Standard message property
+        else if (error.message && typeof error.message === 'string') {
+            msg = error.message;
+        }
+        // Exception text
+        else if (error.exc) {
+            msg = String(error.exc);
+        }
+        // Reason property
+        else if (error.reason) {
+            msg = error.reason;
+        }
+        // responseText from XHR
+        else if (error.responseText) {
+            try {
+                const parsed = JSON.parse(error.responseText);
+                msg = parsed.message || parsed.exc || error.responseText;
+            } catch (e) {
+                msg = error.responseText;
+            }
+        }
+        // Try to stringify, but avoid [object Object]
+        else {
+            try {
+                const str = JSON.stringify(error);
+                msg = str !== '{}' ? str : __('Payment failed');
+            } catch (e) {
+                msg = __('Payment failed');
+            }
+        }
+    } else {
+        msg = String(error);
+    }
+
+    // Avoid [object Object]
+    if (msg === '[object Object]' || !msg) {
+        return __('Payment failed. Please try again.');
+    }
+
+    // Check for specific known error patterns and provide user-friendly messages
+    const lowerMsg = msg.toLowerCase();
+
+    if (lowerMsg.includes('timeout') || lowerMsg.includes('timed out') || lowerMsg.includes('expired')) {
+        return __('Payment expired. Please try again.');
+    }
+    if (lowerMsg.includes('cancel') || lowerMsg.includes('cancelled') || lowerMsg.includes('canceled')) {
+        return __('Payment was cancelled.');
+    }
+    if (lowerMsg.includes('declined') || lowerMsg.includes('rejected')) {
+        return __('Payment was declined. Please try again or use a different card.');
+    }
+    if (lowerMsg.includes('terminal is not available') || lowerMsg.includes('terminal not found')) {
+        return __('Terminal is not available. Please check the terminal.');
+    }
+    if (lowerMsg.includes('insufficient funds') || lowerMsg.includes('not enough')) {
+        return __('Insufficient funds on the card.');
+    }
+    if (lowerMsg.includes('network') || lowerMsg.includes('connection')) {
+        return __('Network error. Please check the connection and try again.');
+    }
 
     // Try to extract the message from Wallee API error format
     // Example: "message='Terminal transaction canceled.'"
@@ -379,11 +460,21 @@ wallee_integration.extract_error_message = function(error) {
         }
     }
 
+    // Extract from HTTP response dumps
+    if (msg.includes('HTTP response body:') || msg.includes('HTTP response headers:')) {
+        // Look for a message in the response
+        const bodyMatch = msg.match(/message['":\s]+['"]?([^'"}\n]+)/i);
+        if (bodyMatch) {
+            return bodyMatch[1].trim();
+        }
+        return __('Payment failed. Please try again.');
+    }
+
     // If message is too long (API dump), truncate it
     if (msg.length > 200) {
         // Try to find a meaningful part
         if (msg.includes('Reason:')) {
-            const reasonMatch = msg.match(/Reason:\s*([^H]+)/);
+            const reasonMatch = msg.match(/Reason:\s*([^H\n]+)/);
             if (reasonMatch) {
                 return reasonMatch[1].trim();
             }
@@ -416,34 +507,32 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
     dialog.disable_primary_action();
 
     try {
-        // Call API to initiate payment
-        const result = await frappe.call({
-            method: 'wallee_integration.wallee_integration.api.pos.initiate_terminal_payment',
-            args: {
+        // Call API to initiate payment using xcall (no default error popup)
+        const result = await frappe.xcall(
+            'wallee_integration.wallee_integration.api.pos.initiate_terminal_payment',
+            {
                 amount: amount,
                 currency: config.currency,
                 terminal: terminal,
                 pos_invoice: config.reference_name || null,
                 customer: null
             }
-        });
+        );
 
-        if (result.exc) {
-            throw new Error(result.exc);
-        }
-
-        if (result.message && result.message.transaction_name) {
-            const transactionName = result.message.transaction_name;
+        if (result && result.transaction_name) {
+            const transactionName = result.transaction_name;
             dialog.wallee_current_transaction = transactionName;
 
             statusDiv.html(`
-                <div class="alert alert-warning">
-                    <i class="fa fa-spinner fa-spin"></i>
-                    ${__('Waiting for payment on terminal...')}<br>
-                    <small>${__('Transaction')}: ${transactionName}</small>
-                    <div class="wallee-cancel-container" style="margin-top: 10px;">
+                <div class="alert alert-warning wallee-status-alert">
+                    <div class="wallee-status-content">
+                        <div class="wallee-status-text">
+                            <i class="fa fa-spinner fa-spin"></i>
+                            ${__('Waiting for payment on terminal...')}<br>
+                            <small>${__('Transaction')}: ${transactionName}</small>
+                        </div>
                         <button class="btn btn-sm btn-danger wallee-cancel-payment">
-                            <i class="fa fa-times"></i> ${__('Cancel Payment')}
+                            <i class="fa fa-times"></i> ${__('Cancel')}
                         </button>
                     </div>
                 </div>
@@ -455,24 +544,29 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
                 dialog.wallee_polling_active = false;
 
                 try {
-                    await frappe.call({
-                        method: 'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
-                        args: { transaction_name: transactionName }
-                    });
+                    const cancelResult = await frappe.xcall(
+                        'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
+                        { transaction_name: transactionName }
+                    );
+
+                    const alertClass = cancelResult.requires_terminal_cancel ? 'alert-warning' : 'alert-success';
+                    const icon = cancelResult.requires_terminal_cancel ? 'fa-exclamation-triangle' : 'fa-ban';
+                    const message = cancelResult.message || __('Payment cancelled');
 
                     statusDiv.html(`
-                        <div class="alert alert-warning">
-                            <i class="fa fa-ban"></i>
-                            ${__('Payment cancelled')}
+                        <div class="alert ${alertClass}">
+                            <i class="fa ${icon}"></i>
+                            ${message}
                         </div>
                     `);
                     dialog.enable_primary_action();
                     config.on_cancel();
                 } catch (cancelError) {
+                    const errorMsg = wallee_integration.extract_error_message(cancelError);
                     statusDiv.html(`
                         <div class="alert alert-danger">
                             <i class="fa fa-exclamation-triangle"></i>
-                            ${__('Could not cancel payment. Please check the terminal.')}
+                            ${errorMsg}
                         </div>
                     `);
                     dialog.enable_primary_action();
@@ -481,8 +575,10 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
 
             // Start polling for status
             await wallee_integration.poll_payment_status(dialog, transactionName, config);
-        } else if (result.message && result.message.error) {
-            throw new Error(result.message.error);
+        } else if (result && result.error) {
+            throw new Error(result.error);
+        } else {
+            throw new Error(__('Unexpected response from server'));
         }
     } catch (error) {
         console.error('Payment error:', error);
@@ -529,7 +625,11 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
     try {
         const result = await frappe.call({
             method: 'wallee_integration.wallee_integration.api.pos.check_terminal_payment_status',
-            args: { transaction_name: transactionName }
+            args: { transaction_name: transactionName },
+            freeze: false,
+            error: function() {
+                // Suppress default error handler - we handle it ourselves
+            }
         });
 
         if (result.message) {
@@ -557,30 +657,36 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     status: status
                 });
             } else if (status === 'Failed' || status === 'Decline' || status === 'Voided') {
-                // Failed
+                // Failed - extract clean error message
+                const failureReason = result.message.failure_reason
+                    ? wallee_integration.extract_error_message({ message: result.message.failure_reason })
+                    : __('The payment was declined or cancelled.');
+
                 statusDiv.html(`
                     <div class="alert alert-danger">
                         <i class="fa fa-times-circle"></i>
                         <strong>${__('Payment Failed')}</strong><br>
-                        ${result.message.failure_reason || __('The payment was declined or cancelled.')}
+                        ${failureReason}
                     </div>
                 `);
                 dialog.enable_primary_action();
                 config.on_failure({
                     transaction_name: transactionName,
                     status: status,
-                    reason: result.message.failure_reason
+                    reason: failureReason
                 });
             } else {
                 // Still processing - show status with cancel button
                 statusDiv.html(`
-                    <div class="alert alert-warning">
-                        <i class="fa fa-spinner fa-spin"></i>
-                        ${__('Waiting for payment on terminal...')}<br>
-                        <small>${__('Status')}: ${status || wallee_state || 'Processing'}</small>
-                        <div class="wallee-cancel-container" style="margin-top: 10px;">
+                    <div class="alert alert-warning wallee-status-alert">
+                        <div class="wallee-status-content">
+                            <div class="wallee-status-text">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                ${__('Waiting for payment on terminal...')}<br>
+                                <small>${__('Status')}: ${status || wallee_state || 'Processing'}</small>
+                            </div>
                             <button class="btn btn-sm btn-danger wallee-cancel-payment">
-                                <i class="fa fa-times"></i> ${__('Cancel Payment')}
+                                <i class="fa fa-times"></i> ${__('Cancel')}
                             </button>
                         </div>
                     </div>
@@ -592,24 +698,29 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     dialog.wallee_polling_active = false;
 
                     try {
-                        await frappe.call({
-                            method: 'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
-                            args: { transaction_name: transactionName }
-                        });
+                        const cancelResult = await frappe.xcall(
+                            'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
+                            { transaction_name: transactionName }
+                        );
+
+                        const alertClass = cancelResult.requires_terminal_cancel ? 'alert-warning' : 'alert-success';
+                        const icon = cancelResult.requires_terminal_cancel ? 'fa-exclamation-triangle' : 'fa-ban';
+                        const message = cancelResult.message || __('Payment cancelled');
 
                         statusDiv.html(`
-                            <div class="alert alert-warning">
-                                <i class="fa fa-ban"></i>
-                                ${__('Payment cancelled')}
+                            <div class="alert ${alertClass}">
+                                <i class="fa ${icon}"></i>
+                                ${message}
                             </div>
                         `);
                         dialog.enable_primary_action();
                         config.on_cancel();
                     } catch (cancelError) {
+                        const errorMsg = wallee_integration.extract_error_message(cancelError);
                         statusDiv.html(`
                             <div class="alert alert-danger">
                                 <i class="fa fa-exclamation-triangle"></i>
-                                ${__('Could not cancel payment. Please check the terminal.')}
+                                ${errorMsg}
                             </div>
                         `);
                         dialog.enable_primary_action();
@@ -855,6 +966,22 @@ wallee_integration.inject_payment_styles = function() {
         .wallee-payment-status .fa-clock-o {
             margin-right: 8px;
             font-size: 18px;
+        }
+
+        .wallee-status-alert .wallee-status-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .wallee-status-alert .wallee-status-text {
+            flex: 1;
+        }
+
+        .wallee-status-alert .wallee-cancel-payment {
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         /* Hide max button if no max_amount */

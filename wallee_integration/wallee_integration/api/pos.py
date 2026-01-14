@@ -85,28 +85,40 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 		merchant_reference=merchant_reference
 	)
 
-	# Initiate payment on terminal
+	# Initiate payment on terminal in background
+	# This returns immediately so frontend can show "Waiting" status with Cancel button
+	frappe.enqueue(
+		"wallee_integration.wallee_integration.api.pos.process_terminal_async",
+		queue="short",
+		terminal_id=terminal_doc.terminal_id,
+		transaction_id=transaction_id,
+		transaction_name=local_transaction.name
+	)
+
+	return {
+		"success": True,
+		"transaction_name": local_transaction.name,
+		"transaction_id": transaction_id,
+		"terminal": terminal_doc.terminal_name,
+		"amount": amount,
+		"currency": currency,
+		"status": "Processing",
+		"message": _("Payment initiated on terminal. Please complete on device.")
+	}
+
+
+def process_terminal_async(terminal_id, transaction_id, transaction_name):
+	"""Background job to process terminal payment"""
+	from wallee_integration.wallee_integration.api.terminal import initiate_terminal_transaction
+
 	try:
-		result = initiate_terminal_transaction(terminal_doc.terminal_id, transaction_id)
-
-		return {
-			"success": True,
-			"transaction_name": local_transaction.name,
-			"transaction_id": transaction_id,
-			"terminal": terminal_doc.terminal_name,
-			"amount": amount,
-			"currency": currency,
-			"status": "Processing",
-			"message": _("Payment initiated on terminal. Please complete on device.")
-		}
+		initiate_terminal_transaction(terminal_id, transaction_id)
 	except Exception as e:
-		# Update transaction status to failed
-		local_transaction.status = "Failed"
-		local_transaction.failure_reason = str(e)
-		local_transaction.save(ignore_permissions=True)
-		frappe.db.commit()
-
-		frappe.throw(_("Failed to initiate terminal payment: {0}").format(str(e)))
+		# Log error - the polling will pick up the actual status from Wallee
+		frappe.log_error(
+			title="Terminal Async Error",
+			message=f"Terminal: {terminal_id}, TX: {transaction_id}, Error: {str(e)}"
+		)
 
 
 @frappe.whitelist()
@@ -173,17 +185,45 @@ def cancel_terminal_payment(transaction_name):
 	Returns:
 		Cancellation result
 	"""
-	from wallee_integration.wallee_integration.api.transaction import void_transaction
+	from wallee_integration.wallee_integration.api.transaction import void_transaction, get_full_transaction
 
 	doc = frappe.get_doc("Wallee Transaction", transaction_name)
 
-	if doc.status not in ["Pending", "Processing", "Authorized"]:
-		frappe.throw(_("Only pending or authorized transactions can be cancelled"))
+	if doc.status not in ["Pending", "Processing", "Authorized", "Confirmed"]:
+		frappe.throw(_("Only pending, processing or authorized transactions can be cancelled"))
 
+	# Get current state from Wallee
 	try:
-		void_transaction(doc.transaction_id)
+		wallee_tx = get_full_transaction(doc.transaction_id)
+		wallee_state = wallee_tx.state.value.upper() if wallee_tx.state else ""
+	except Exception:
+		wallee_state = ""
+
+	# For AUTHORIZED transactions, use void
+	if wallee_state == "AUTHORIZED" or doc.status == "Authorized":
+		try:
+			void_transaction(doc.transaction_id)
+			doc.status = "Voided"
+			doc.voided_on = frappe.utils.now_datetime()
+			doc.save(ignore_permissions=True)
+			frappe.db.commit()
+
+			return {
+				"success": True,
+				"transaction_name": doc.name,
+				"status": "Voided",
+				"message": _("Payment cancelled successfully")
+			}
+		except Exception as e:
+			frappe.throw(_("Failed to cancel payment: {0}").format(str(e)))
+
+	# For PENDING/PROCESSING/CONFIRMED transactions (waiting on terminal),
+	# we cannot void via API - user must cancel on terminal
+	# Mark as cancelled locally and inform user
+	elif wallee_state in ["PENDING", "PROCESSING", "CONFIRMED", "CREATE"] or doc.status in ["Pending", "Processing", "Confirmed"]:
 		doc.status = "Voided"
 		doc.voided_on = frappe.utils.now_datetime()
+		doc.failure_reason = _("Cancelled by user - please cancel on terminal if still active")
 		doc.save(ignore_permissions=True)
 		frappe.db.commit()
 
@@ -191,10 +231,12 @@ def cancel_terminal_payment(transaction_name):
 			"success": True,
 			"transaction_name": doc.name,
 			"status": "Voided",
-			"message": _("Payment cancelled successfully")
+			"message": _("Payment cancelled. Please also cancel on the terminal if the payment is still active."),
+			"requires_terminal_cancel": True
 		}
-	except Exception as e:
-		frappe.throw(_("Failed to cancel payment: {0}").format(str(e)))
+
+	else:
+		frappe.throw(_("Transaction in state {0} cannot be cancelled").format(wallee_state or doc.status))
 
 
 @frappe.whitelist()

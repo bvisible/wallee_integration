@@ -220,7 +220,8 @@ def void_transaction(transaction_id):
 
     try:
         # Note: method signature is (id, space) not (space, id)
-        response = service.post_payment_transactions_id_void_online(transaction_id, space_id)
+        # transaction_id must be int for Wallee SDK
+        response = service.post_payment_transactions_id_void_online(int(transaction_id), space_id)
         log_api_call("POST", f"payment/transactions/{transaction_id}/void", response_data=response.to_dict())
         return response
     except Exception as e:
