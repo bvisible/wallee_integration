@@ -356,10 +356,53 @@ wallee_integration.update_terminal_info = async function(dialog, terminalName) {
 };
 
 /**
+ * Extract clean error message from API error
+ */
+wallee_integration.extract_error_message = function(error) {
+    if (!error) return __('Unknown error');
+
+    let msg = error.message || String(error);
+
+    // Try to extract the message from Wallee API error format
+    // Example: "message='Terminal transaction canceled.'"
+    const messageMatch = msg.match(/message='([^']+)'/);
+    if (messageMatch) {
+        return messageMatch[1];
+    }
+
+    // Try to extract from "The terminal is not available" type errors
+    if (msg.includes('terminal')) {
+        const terminalMatch = msg.match(/(The terminal[^.]+\.)/i) ||
+                              msg.match(/(Terminal[^.]+\.)/i);
+        if (terminalMatch) {
+            return terminalMatch[1];
+        }
+    }
+
+    // If message is too long (API dump), truncate it
+    if (msg.length > 200) {
+        // Try to find a meaningful part
+        if (msg.includes('Reason:')) {
+            const reasonMatch = msg.match(/Reason:\s*([^H]+)/);
+            if (reasonMatch) {
+                return reasonMatch[1].trim();
+            }
+        }
+        return __('Payment failed. Please try again.');
+    }
+
+    return msg;
+};
+
+/**
  * Process terminal payment
  */
 wallee_integration.process_terminal_payment = async function(dialog, terminal, amount, config) {
     const statusDiv = dialog.$wrapper.find('.wallee-payment-status');
+
+    // Store current transaction for cancellation
+    dialog.wallee_current_transaction = null;
+    dialog.wallee_polling_active = true;
 
     // Show status
     statusDiv.show().html(`
@@ -369,7 +412,7 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
         </div>
     `);
 
-    // Disable primary button
+    // Disable primary button and change Cancel to "Cancel Payment"
     dialog.disable_primary_action();
 
     try {
@@ -391,14 +434,50 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
 
         if (result.message && result.message.transaction_name) {
             const transactionName = result.message.transaction_name;
+            dialog.wallee_current_transaction = transactionName;
 
             statusDiv.html(`
                 <div class="alert alert-warning">
                     <i class="fa fa-spinner fa-spin"></i>
                     ${__('Waiting for payment on terminal...')}<br>
                     <small>${__('Transaction')}: ${transactionName}</small>
+                    <div class="wallee-cancel-container" style="margin-top: 10px;">
+                        <button class="btn btn-sm btn-danger wallee-cancel-payment">
+                            <i class="fa fa-times"></i> ${__('Cancel Payment')}
+                        </button>
+                    </div>
                 </div>
             `);
+
+            // Add cancel button handler
+            statusDiv.find('.wallee-cancel-payment').on('click', async function() {
+                $(this).prop('disabled', true).html(`<i class="fa fa-spinner fa-spin"></i> ${__('Cancelling...')}`);
+                dialog.wallee_polling_active = false;
+
+                try {
+                    await frappe.call({
+                        method: 'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
+                        args: { transaction_name: transactionName }
+                    });
+
+                    statusDiv.html(`
+                        <div class="alert alert-warning">
+                            <i class="fa fa-ban"></i>
+                            ${__('Payment cancelled')}
+                        </div>
+                    `);
+                    dialog.enable_primary_action();
+                    config.on_cancel();
+                } catch (cancelError) {
+                    statusDiv.html(`
+                        <div class="alert alert-danger">
+                            <i class="fa fa-exclamation-triangle"></i>
+                            ${__('Could not cancel payment. Please check the terminal.')}
+                        </div>
+                    `);
+                    dialog.enable_primary_action();
+                }
+            });
 
             // Start polling for status
             await wallee_integration.poll_payment_status(dialog, transactionName, config);
@@ -407,15 +486,17 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
         }
     } catch (error) {
         console.error('Payment error:', error);
+        const cleanError = wallee_integration.extract_error_message(error);
+
         statusDiv.html(`
             <div class="alert alert-danger">
                 <i class="fa fa-times"></i>
                 <strong>${__('Error')}</strong><br>
-                ${error.message || __('Failed to initiate payment')}
+                ${cleanError}
             </div>
         `);
         dialog.enable_primary_action();
-        config.on_failure({ error: error.message });
+        config.on_failure({ error: cleanError });
     }
 };
 
@@ -426,6 +507,11 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
     const maxAttempts = 90;  // 3 minutes with 2-second intervals
     const pollInterval = 2000;
     const statusDiv = dialog.$wrapper.find('.wallee-payment-status');
+
+    // Check if polling was cancelled
+    if (!dialog.wallee_polling_active) {
+        return;
+    }
 
     if (attempts >= maxAttempts) {
         statusDiv.html(`
@@ -535,7 +621,7 @@ wallee_integration.inject_payment_styles = function() {
             display: flex;
             align-items: center;
             padding: 12px 15px;
-            background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-50) 100%);
+            background-color: var(--gray-100);
             border-bottom: 1px solid var(--gray-300);
         }
 
@@ -615,7 +701,7 @@ wallee_integration.inject_payment_styles = function() {
             border-radius: 8px;
             padding: 0 15px;
             margin-bottom: 15px;
-            background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+            background-color: white;
         }
 
         .wallee-amount-currency {
@@ -655,7 +741,7 @@ wallee_integration.inject_payment_styles = function() {
         }
 
         .wallee-numpad-btn {
-            background: linear-gradient(180deg, var(--gray-100) 0%, var(--gray-200) 100%);
+            background-color: var(--gray-100);
             border: 1px solid var(--gray-300);
             border-radius: 8px;
             padding: 18px 0;
@@ -667,33 +753,33 @@ wallee_integration.inject_payment_styles = function() {
         }
 
         .wallee-numpad-btn:hover {
-            background: linear-gradient(180deg, var(--gray-200) 0%, var(--gray-300) 100%);
+            background-color: var(--gray-200);
             transform: translateY(-1px);
         }
 
         .wallee-numpad-btn:active {
-            background: var(--gray-300);
+            background-color: var(--gray-300);
             transform: translateY(0);
         }
 
         .wallee-numpad-backspace {
-            background: linear-gradient(180deg, var(--red-100) 0%, var(--red-200) 100%);
+            background-color: var(--red-100);
             color: var(--red-600);
             border-color: var(--red-300);
         }
 
         .wallee-numpad-backspace:hover {
-            background: linear-gradient(180deg, var(--red-200) 0%, var(--red-300) 100%);
+            background-color: var(--red-200);
         }
 
         .wallee-numpad-clear {
-            background: linear-gradient(180deg, var(--orange-100) 0%, var(--orange-200) 100%);
+            background-color: var(--orange-100);
             color: var(--orange-600);
             border-color: var(--orange-300);
         }
 
         .wallee-numpad-max {
-            background: linear-gradient(180deg, var(--blue-100) 0%, var(--blue-200) 100%);
+            background-color: var(--blue-100);
             color: var(--blue-600);
             border-color: var(--blue-300);
             font-size: 14px;
@@ -726,11 +812,11 @@ wallee_integration.inject_payment_styles = function() {
 
         /* Dark mode support */
         [data-theme="dark"] .wallee-amount-container {
-            background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-900) 100%);
+            background-color: var(--gray-800);
         }
 
         [data-theme="dark"] .wallee-numpad-btn {
-            background: linear-gradient(180deg, var(--gray-700) 0%, var(--gray-800) 100%);
+            background-color: var(--gray-700);
             border-color: var(--gray-600);
             color: var(--gray-200);
         }
