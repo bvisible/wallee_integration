@@ -741,8 +741,8 @@ wallee_integration.inject_payment_styles = function() {
         }
 
         .wallee-numpad-btn {
-            background-color: #e5e7eb;
-            border: 1px solid #d1d5db;
+            background-color: #d1d5db;
+            border: 1px solid #9ca3af;
             border-radius: 8px;
             padding: 18px 0;
             font-size: 20px;
@@ -753,44 +753,45 @@ wallee_integration.inject_payment_styles = function() {
         }
 
         .wallee-numpad-btn:hover {
-            background-color: #d1d5db;
+            background-color: #9ca3af;
             transform: translateY(-1px);
         }
 
         .wallee-numpad-btn:active {
-            background-color: #9ca3af;
+            background-color: #6b7280;
+            color: white;
             transform: translateY(0);
         }
 
         .wallee-numpad-backspace {
-            background-color: #fecaca;
-            color: #dc2626;
-            border-color: #f87171;
+            background-color: #f87171;
+            color: white;
+            border-color: #ef4444;
         }
 
         .wallee-numpad-backspace:hover {
-            background-color: #fca5a5;
+            background-color: #ef4444;
         }
 
         .wallee-numpad-clear {
-            background-color: #fed7aa;
-            color: #ea580c;
-            border-color: #fb923c;
+            background-color: #fb923c;
+            color: white;
+            border-color: #f97316;
         }
 
         .wallee-numpad-clear:hover {
-            background-color: #fdba74;
+            background-color: #f97316;
         }
 
         .wallee-numpad-max {
-            background-color: #bfdbfe;
-            color: #2563eb;
-            border-color: #60a5fa;
+            background-color: #60a5fa;
+            color: white;
+            border-color: #3b82f6;
             font-size: 14px;
         }
 
         .wallee-numpad-max:hover {
-            background-color: #93c5fd;
+            background-color: #3b82f6;
         }
 
         .wallee-payment-status {
