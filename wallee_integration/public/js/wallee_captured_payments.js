@@ -3,9 +3,13 @@
  *
  * Manages localStorage persistence for captured terminal payments.
  * Allows payment state to survive page reloads.
+ * Works in both Frappe and standalone (POSNext) environments.
  */
 
-frappe.provide('wallee_integration');
+// Create wallee_integration namespace (works with or without frappe)
+if (typeof window.wallee_integration === 'undefined') {
+    window.wallee_integration = {};
+}
 
 wallee_integration.captured_payments = {
     STORAGE_KEY: 'wallee_captured_payments',
@@ -152,7 +156,19 @@ wallee_integration.captured_payments = {
     }
 };
 
-// Clean up expired entries on load
-$(document).ready(function() {
-    wallee_integration.captured_payments.cleanupExpired();
-});
+// Clean up expired entries on load (works with or without jQuery)
+(function() {
+    function init() {
+        if (wallee_integration.captured_payments) {
+            wallee_integration.captured_payments.cleanupExpired();
+        }
+    }
+
+    if (typeof $ !== 'undefined' && $.fn) {
+        $(document).ready(init);
+    } else if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
