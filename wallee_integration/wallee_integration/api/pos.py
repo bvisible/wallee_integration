@@ -180,6 +180,8 @@ def check_terminal_payment_status(transaction_name):
 		return {
 			"success": False,
 			"status": doc.status,
+			"completed": doc.status in ["Completed", "Fulfill"],
+			"failed": doc.status in ["Failed", "Decline", "Voided"],
 			"message": str(e)
 		}
 
