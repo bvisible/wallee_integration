@@ -163,6 +163,12 @@ def check_terminal_payment_status(transaction_name):
 		update_transaction_from_wallee(doc, wallee_tx)
 		doc.reload()
 
+		# For terminal payments, "Authorized" means the payment was successful
+		# (the card was charged). It will transition to Completed/Fulfill automatically.
+		# We treat Authorized as completed for the POS flow.
+		completed_states = ["Completed", "Fulfill", "Authorized"]
+		failed_states = ["Failed", "Decline", "Voided"]
+
 		return {
 			"success": True,
 			"transaction_name": doc.name,
@@ -171,17 +177,19 @@ def check_terminal_payment_status(transaction_name):
 			"wallee_state": str(wallee_tx.state.value) if wallee_tx.state else None,
 			"amount": doc.amount,
 			"currency": doc.currency,
-			"completed": doc.status in ["Completed", "Fulfill"],
-			"failed": doc.status in ["Failed", "Decline", "Voided"],
+			"completed": doc.status in completed_states,
+			"failed": doc.status in failed_states,
 			"failure_reason": doc.failure_reason
 		}
 	except Exception as e:
 		frappe.log_error("Terminal Status Check Error", f"Transaction: {transaction_name}, Error: {str(e)}")
+		completed_states = ["Completed", "Fulfill", "Authorized"]
+		failed_states = ["Failed", "Decline", "Voided"]
 		return {
 			"success": False,
 			"status": doc.status,
-			"completed": doc.status in ["Completed", "Fulfill"],
-			"failed": doc.status in ["Failed", "Decline", "Voided"],
+			"completed": doc.status in completed_states,
+			"failed": doc.status in failed_states,
 			"message": str(e)
 		}
 
