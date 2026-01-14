@@ -27,6 +27,9 @@ window.wallee_integration = window.wallee_integration || {};
  * @param {number} options.max_amount - Maximum allowed amount
  * @param {string} options.reference_doctype - Reference document type
  * @param {string} options.reference_name - Reference document name
+ * @param {string} options.invoice_reference - Invoice reference for localStorage persistence (e.g., "POS-INV-001")
+ * @param {string} options.mode_of_payment - Mode of Payment name (for POS integration)
+ * @param {boolean} options.auto_save_to_storage - Auto-save to localStorage on success (default: true)
  * @param {Function} options.on_success - Callback on successful payment
  * @param {Function} options.on_failure - Callback on failed payment
  * @param {Function} options.on_cancel - Callback on cancelled payment
@@ -39,6 +42,9 @@ wallee_integration.show_terminal_payment = async function(options = {}) {
         max_amount: options.max_amount || null,
         reference_doctype: options.reference_doctype || null,
         reference_name: options.reference_name || null,
+        invoice_reference: options.invoice_reference || null,
+        mode_of_payment: options.mode_of_payment || null,
+        auto_save_to_storage: options.auto_save_to_storage !== false,
         on_success: options.on_success || function() {},
         on_failure: options.on_failure || function() {},
         on_cancel: options.on_cancel || function() {}
@@ -596,6 +602,10 @@ wallee_integration.create_till_connection = async function(transactionName, dial
 wallee_integration.process_terminal_payment = async function(dialog, terminal, amount, config) {
     const statusDiv = dialog.$wrapper.find('.wallee-payment-status');
 
+    // Store terminal and amount in config for use in success callback
+    config._terminal = terminal;
+    config._captured_amount = amount;
+
     // Store current transaction for cancellation
     dialog.wallee_current_transaction = null;
     dialog.wallee_till_connection = null;
@@ -792,13 +802,30 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                 `);
                 dialog.set_primary_action(__('Close'), () => dialog.hide());
 
-                // Call success callback
+                // Save to localStorage if configured
+                if (config.auto_save_to_storage && config.invoice_reference && wallee_integration.captured_payments) {
+                    wallee_integration.captured_payments.save(config.invoice_reference, {
+                        transaction_name: transactionName,
+                        amount: result.message.amount,
+                        currency: config.currency,
+                        status: 'Completed',
+                        terminal: config._terminal,
+                        pos_profile: config.pos_profile,
+                        mode_of_payment: config.mode_of_payment
+                    });
+                }
+
+                // Call success callback with locked flag for POS integration
                 config.on_success({
                     transaction_name: transactionName,
                     transaction_id: result.message.transaction_id,
                     amount: result.message.amount,
                     currency: config.currency,
-                    status: status
+                    status: status,
+                    terminal: config._terminal,
+                    mode_of_payment: config.mode_of_payment,
+                    is_locked: true,
+                    is_wallee_payment: true
                 });
             } else if (status === 'Voided' || dialog.wallee_canceled_by_websocket || dialog.wallee_canceled_by_user) {
                 // Voided = cancelled by user - cleanup WebSocket connection
