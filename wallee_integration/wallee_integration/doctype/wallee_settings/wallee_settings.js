@@ -52,7 +52,35 @@ frappe.ui.form.on('Wallee Settings', {
             }, __('Actions'));
 
             frm.add_custom_button(__('Test Terminal Transaction'), function() {
-                show_test_terminal_dialog(frm);
+                // Use the new reusable terminal payment dialog
+                if (window.wallee_integration && wallee_integration.show_terminal_payment) {
+                    wallee_integration.show_terminal_payment({
+                        amount: 5.00,
+                        currency: 'CHF',
+                        max_amount: 9.00,  // QAT test: 3-9 CHF = approved
+                        on_success: (result) => {
+                            frappe.msgprint({
+                                title: __('Payment Successful'),
+                                indicator: 'green',
+                                message: `
+                                    <p><strong>${__('Transaction')}:</strong> ${result.transaction_name}</p>
+                                    <p><strong>${__('Amount')}:</strong> ${result.currency} ${result.amount}</p>
+                                    <p><strong>${__('Status')}:</strong> ${result.status}</p>
+                                `
+                            });
+                        },
+                        on_failure: (error) => {
+                            frappe.msgprint({
+                                title: __('Payment Failed'),
+                                indicator: 'red',
+                                message: error.reason || __('The payment was declined.')
+                            });
+                        }
+                    });
+                } else {
+                    // Fallback to old dialog if new component not loaded
+                    show_test_terminal_dialog(frm);
+                }
             }, __('Actions'));
         }
 
