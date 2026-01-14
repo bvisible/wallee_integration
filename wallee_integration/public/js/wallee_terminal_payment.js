@@ -572,14 +572,49 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     reason: result.message.failure_reason
                 });
             } else {
-                // Still processing
+                // Still processing - show status with cancel button
                 statusDiv.html(`
-                    <div class="alert alert-info">
+                    <div class="alert alert-warning">
                         <i class="fa fa-spinner fa-spin"></i>
                         ${__('Waiting for payment on terminal...')}<br>
                         <small>${__('Status')}: ${status || wallee_state || 'Processing'}</small>
+                        <div class="wallee-cancel-container" style="margin-top: 10px;">
+                            <button class="btn btn-sm btn-danger wallee-cancel-payment">
+                                <i class="fa fa-times"></i> ${__('Cancel Payment')}
+                            </button>
+                        </div>
                     </div>
                 `);
+
+                // Re-attach cancel button handler
+                statusDiv.find('.wallee-cancel-payment').on('click', async function() {
+                    $(this).prop('disabled', true).html(`<i class="fa fa-spinner fa-spin"></i> ${__('Cancelling...')}`);
+                    dialog.wallee_polling_active = false;
+
+                    try {
+                        await frappe.call({
+                            method: 'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
+                            args: { transaction_name: transactionName }
+                        });
+
+                        statusDiv.html(`
+                            <div class="alert alert-warning">
+                                <i class="fa fa-ban"></i>
+                                ${__('Payment cancelled')}
+                            </div>
+                        `);
+                        dialog.enable_primary_action();
+                        config.on_cancel();
+                    } catch (cancelError) {
+                        statusDiv.html(`
+                            <div class="alert alert-danger">
+                                <i class="fa fa-exclamation-triangle"></i>
+                                ${__('Could not cancel payment. Please check the terminal.')}
+                            </div>
+                        `);
+                        dialog.enable_primary_action();
+                    }
+                });
 
                 setTimeout(() => {
                     wallee_integration.poll_payment_status(dialog, transactionName, config, attempts + 1);
