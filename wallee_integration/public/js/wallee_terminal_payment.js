@@ -486,6 +486,83 @@ wallee_integration.extract_error_message = function(error) {
 };
 
 /**
+ * Load Wallee Till SDK dynamically
+ */
+wallee_integration.load_till_sdk = function() {
+    return new Promise((resolve, reject) => {
+        if (window.TerminalTillConnection) {
+            resolve();
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://app-wallee.com/assets/payment/terminal-till-connection.js';
+        script.type = 'text/javascript';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load Wallee Till SDK'));
+        document.head.appendChild(script);
+    });
+};
+
+/**
+ * Create Till WebSocket connection for terminal control
+ */
+wallee_integration.create_till_connection = async function(transactionName, dialog, config) {
+    try {
+        // Get credentials from backend
+        const credentials = await frappe.xcall(
+            'wallee_integration.wallee_integration.api.pos.get_till_connection_credentials',
+            { transaction_name: transactionName }
+        );
+
+        if (!credentials.success || !credentials.token) {
+            console.warn('Could not get Till credentials:', credentials.error);
+            return null;
+        }
+
+        // Load SDK if needed
+        await wallee_integration.load_till_sdk();
+
+        // Create connection
+        const tillConnection = new TerminalTillConnection({
+            url: credentials.websocket_url,
+            token: credentials.token
+        });
+
+        // Subscribe to events
+        tillConnection.subscribe('charged', function() {
+            console.log('Till: Transaction charged');
+        });
+
+        tillConnection.subscribe('canceled', function() {
+            console.log('Till: Transaction canceled');
+            dialog.wallee_polling_active = false;
+        });
+
+        tillConnection.subscribe('error', function(error) {
+            console.error('Till error:', error);
+        });
+
+        tillConnection.subscribe('connected', function() {
+            console.log('Till: WebSocket connected');
+        });
+
+        tillConnection.subscribe('disconnected', function() {
+            console.log('Till: WebSocket disconnected');
+        });
+
+        // Connect
+        tillConnection.connect();
+
+        return tillConnection;
+
+    } catch (error) {
+        console.warn('Till connection setup failed:', error);
+        return null;
+    }
+};
+
+/**
  * Process terminal payment
  */
 wallee_integration.process_terminal_payment = async function(dialog, terminal, amount, config) {
@@ -493,6 +570,7 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
 
     // Store current transaction for cancellation
     dialog.wallee_current_transaction = null;
+    dialog.wallee_till_connection = null;
     dialog.wallee_polling_active = true;
 
     // Show status
@@ -538,20 +616,49 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
                 </div>
             `);
 
+            // Try to establish Till WebSocket connection for real-time control
+            // This runs in background - polling continues as fallback
+            wallee_integration.create_till_connection(transactionName, dialog, config)
+                .then(conn => {
+                    if (conn) {
+                        dialog.wallee_till_connection = conn;
+                        console.log('Till WebSocket connection established');
+                    }
+                })
+                .catch(err => console.warn('Till connection not available:', err));
+
             // Add cancel button handler
             statusDiv.find('.wallee-cancel-payment').on('click', async function() {
                 $(this).prop('disabled', true).html(`<i class="fa fa-spinner fa-spin"></i> ${__('Cancelling...')}`);
                 dialog.wallee_polling_active = false;
 
+                // Try WebSocket cancel first (real-time terminal cancellation)
+                if (dialog.wallee_till_connection) {
+                    try {
+                        console.log('Cancelling via Till WebSocket...');
+                        dialog.wallee_till_connection.cancel();
+
+                        // Give it a moment for the cancel to propagate
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    } catch (wsError) {
+                        console.warn('WebSocket cancel failed:', wsError);
+                    }
+                }
+
+                // Also call backend to update local state
                 try {
                     const cancelResult = await frappe.xcall(
                         'wallee_integration.wallee_integration.api.pos.cancel_terminal_payment',
                         { transaction_name: transactionName }
                     );
 
-                    const alertClass = cancelResult.requires_terminal_cancel ? 'alert-warning' : 'alert-success';
-                    const icon = cancelResult.requires_terminal_cancel ? 'fa-exclamation-triangle' : 'fa-ban';
-                    const message = cancelResult.message || __('Payment cancelled');
+                    // If we had WebSocket, the terminal should be cancelled
+                    const hasWebSocket = !!dialog.wallee_till_connection;
+                    const alertClass = hasWebSocket ? 'alert-success' : (cancelResult.requires_terminal_cancel ? 'alert-warning' : 'alert-success');
+                    const icon = hasWebSocket ? 'fa-ban' : (cancelResult.requires_terminal_cancel ? 'fa-exclamation-triangle' : 'fa-ban');
+                    const message = hasWebSocket
+                        ? __('Payment cancelled on terminal')
+                        : (cancelResult.message || __('Payment cancelled'));
 
                     statusDiv.html(`
                         <div class="alert ${alertClass}">
@@ -561,6 +668,13 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
                     `);
                     dialog.enable_primary_action();
                     config.on_cancel();
+
+                    // Cleanup WebSocket connection
+                    if (dialog.wallee_till_connection) {
+                        try {
+                            dialog.wallee_till_connection = null;
+                        } catch (e) {}
+                    }
                 } catch (cancelError) {
                     const errorMsg = wallee_integration.extract_error_message(cancelError);
                     statusDiv.html(`
@@ -637,7 +751,11 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
             const wallee_state = result.message.wallee_state;
 
             if (status === 'Completed' || status === 'Authorized' || status === 'Fulfill') {
-                // Success!
+                // Success! Cleanup WebSocket connection
+                if (dialog.wallee_till_connection) {
+                    dialog.wallee_till_connection = null;
+                }
+
                 statusDiv.html(`
                     <div class="alert alert-success">
                         <i class="fa fa-check-circle"></i>
@@ -657,7 +775,12 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     status: status
                 });
             } else if (status === 'Failed' || status === 'Decline' || status === 'Voided') {
-                // Failed - extract clean error message
+                // Failed - cleanup WebSocket connection
+                if (dialog.wallee_till_connection) {
+                    dialog.wallee_till_connection = null;
+                }
+
+                // Extract clean error message
                 const failureReason = result.message.failure_reason
                     ? wallee_integration.extract_error_message({ message: result.message.failure_reason })
                     : __('The payment was declined or cancelled.');
@@ -692,10 +815,21 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     </div>
                 `);
 
-                // Re-attach cancel button handler
+                // Re-attach cancel button handler with WebSocket support
                 statusDiv.find('.wallee-cancel-payment').on('click', async function() {
                     $(this).prop('disabled', true).html(`<i class="fa fa-spinner fa-spin"></i> ${__('Cancelling...')}`);
                     dialog.wallee_polling_active = false;
+
+                    // Try WebSocket cancel first (real-time terminal cancellation)
+                    if (dialog.wallee_till_connection) {
+                        try {
+                            console.log('Cancelling via Till WebSocket...');
+                            dialog.wallee_till_connection.cancel();
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        } catch (wsError) {
+                            console.warn('WebSocket cancel failed:', wsError);
+                        }
+                    }
 
                     try {
                         const cancelResult = await frappe.xcall(
@@ -703,9 +837,12 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                             { transaction_name: transactionName }
                         );
 
-                        const alertClass = cancelResult.requires_terminal_cancel ? 'alert-warning' : 'alert-success';
-                        const icon = cancelResult.requires_terminal_cancel ? 'fa-exclamation-triangle' : 'fa-ban';
-                        const message = cancelResult.message || __('Payment cancelled');
+                        const hasWebSocket = !!dialog.wallee_till_connection;
+                        const alertClass = hasWebSocket ? 'alert-success' : (cancelResult.requires_terminal_cancel ? 'alert-warning' : 'alert-success');
+                        const icon = hasWebSocket ? 'fa-ban' : (cancelResult.requires_terminal_cancel ? 'fa-exclamation-triangle' : 'fa-ban');
+                        const message = hasWebSocket
+                            ? __('Payment cancelled on terminal')
+                            : (cancelResult.message || __('Payment cancelled'));
 
                         statusDiv.html(`
                             <div class="alert ${alertClass}">
@@ -715,6 +852,11 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                         `);
                         dialog.enable_primary_action();
                         config.on_cancel();
+
+                        // Cleanup WebSocket
+                        if (dialog.wallee_till_connection) {
+                            dialog.wallee_till_connection = null;
+                        }
                     } catch (cancelError) {
                         const errorMsg = wallee_integration.extract_error_message(cancelError);
                         statusDiv.html(`

@@ -100,6 +100,7 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 		"transaction_name": local_transaction.name,
 		"transaction_id": transaction_id,
 		"terminal": terminal_doc.terminal_name,
+		"terminal_id": terminal_doc.terminal_id,
 		"amount": amount,
 		"currency": currency,
 		"status": "Processing",
@@ -269,3 +270,79 @@ def link_payment_to_invoice(transaction_name, pos_invoice):
 		"success": True,
 		"message": _("Payment linked to invoice {0}").format(pos_invoice)
 	}
+
+
+@frappe.whitelist()
+def get_till_connection_credentials(transaction_name):
+	"""
+	Get WebSocket credentials for Till connection to control terminal payment.
+
+	This allows real-time control including cancellation via tillConnection.cancel().
+
+	Args:
+		transaction_name: Local transaction name (Wallee Transaction doctype)
+
+	Returns:
+		dict with websocket_url, token, terminal_id, transaction_id
+	"""
+	from wallee.service.payment_terminals_service import PaymentTerminalsService
+
+	doc = frappe.get_doc("Wallee Transaction", transaction_name)
+
+	if not doc.transaction_id:
+		frappe.throw(_("Transaction has no Wallee transaction ID"))
+
+	# Get terminal ID
+	terminal_id = None
+	if doc.terminal:
+		terminal_doc = frappe.get_doc("Wallee Payment Terminal", doc.terminal)
+		terminal_id = terminal_doc.terminal_id
+
+	if not terminal_id:
+		# Try to get from Wallee transaction data
+		from wallee_integration.wallee_integration.api.transaction import get_full_transaction
+		tx = get_full_transaction(doc.transaction_id)
+		if tx.terminal:
+			terminal_id = tx.terminal.id
+
+	if not terminal_id:
+		frappe.throw(_("Could not determine terminal ID for this transaction"))
+
+	# Get credentials from Wallee API
+	config = get_wallee_client()
+	space_id = get_space_id()
+	service = PaymentTerminalsService(config)
+
+	try:
+		# Get till connection credentials (returns a token string)
+		token = service.get_payment_terminals_id_till_connection_credentials(
+			int(terminal_id),
+			int(doc.transaction_id),
+			space_id
+		)
+
+		log_api_call(
+			"GET",
+			f"payment/terminals/{terminal_id}/till-connection-credentials",
+			{"transaction_id": doc.transaction_id},
+			{"token": token[:20] + "..." if token else None}
+		)
+
+		return {
+			"success": True,
+			"websocket_url": "wss://app-wallee.com/terminal-websocket",
+			"token": token,
+			"terminal_id": terminal_id,
+			"transaction_id": doc.transaction_id,
+			"transaction_name": transaction_name
+		}
+
+	except Exception as e:
+		frappe.log_error(
+			title="Till Credentials Error",
+			message=f"Terminal: {terminal_id}, TX: {doc.transaction_id}, Error: {str(e)}"
+		)
+		return {
+			"success": False,
+			"error": str(e)
+		}
