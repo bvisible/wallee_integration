@@ -620,6 +620,7 @@ wallee_integration.inject_payment_styles = function() {
         .wallee-terminal-header {
             display: flex;
             align-items: center;
+            justify-content: center;
             padding: 12px 15px;
             background-color: var(--gray-100);
             border-bottom: 1px solid var(--gray-300);
@@ -639,11 +640,14 @@ wallee_integration.inject_payment_styles = function() {
 
         .wallee-terminal-select {
             flex: 1 1 auto;
+            display: flex;
+            justify-content: center;
         }
 
         .wallee-terminal-select-wrapper {
             display: flex;
             align-items: center;
+            justify-content: center;
         }
 
         .wallee-terminal-status-dot {
@@ -697,30 +701,34 @@ wallee_integration.inject_payment_styles = function() {
         .wallee-amount-container {
             display: flex;
             align-items: center;
+            justify-content: center;
             border: 2px solid var(--primary);
             border-radius: 8px;
-            padding: 0 15px;
+            padding: 15px 20px;
             margin-bottom: 15px;
             background-color: white;
+            gap: 10px;
         }
 
         .wallee-amount-currency {
             font-weight: 700;
-            font-size: 18px;
-            margin-right: 10px;
+            font-size: 24px;
             color: var(--primary);
+            flex-shrink: 0;
         }
 
         .wallee-amount-input {
-            flex: 1 1 auto;
             border: none;
             background: transparent;
-            font-size: 32px;
-            padding: 15px 0;
-            text-align: right;
+            font-size: 36px;
+            padding: 0;
+            text-align: center;
             font-weight: 700;
             color: var(--gray-900);
             font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            width: auto;
+            min-width: 120px;
+            max-width: 200px;
         }
 
         .wallee-amount-input:focus {
