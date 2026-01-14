@@ -741,48 +741,56 @@ wallee_integration.inject_payment_styles = function() {
         }
 
         .wallee-numpad-btn {
-            background-color: var(--gray-100);
-            border: 1px solid var(--gray-300);
+            background-color: #e5e7eb;
+            border: 1px solid #d1d5db;
             border-radius: 8px;
             padding: 18px 0;
             font-size: 20px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.15s ease;
-            color: var(--gray-800);
+            color: #1f2937;
         }
 
         .wallee-numpad-btn:hover {
-            background-color: var(--gray-200);
+            background-color: #d1d5db;
             transform: translateY(-1px);
         }
 
         .wallee-numpad-btn:active {
-            background-color: var(--gray-300);
+            background-color: #9ca3af;
             transform: translateY(0);
         }
 
         .wallee-numpad-backspace {
-            background-color: var(--red-100);
-            color: var(--red-600);
-            border-color: var(--red-300);
+            background-color: #fecaca;
+            color: #dc2626;
+            border-color: #f87171;
         }
 
         .wallee-numpad-backspace:hover {
-            background-color: var(--red-200);
+            background-color: #fca5a5;
         }
 
         .wallee-numpad-clear {
-            background-color: var(--orange-100);
-            color: var(--orange-600);
-            border-color: var(--orange-300);
+            background-color: #fed7aa;
+            color: #ea580c;
+            border-color: #fb923c;
+        }
+
+        .wallee-numpad-clear:hover {
+            background-color: #fdba74;
         }
 
         .wallee-numpad-max {
-            background-color: var(--blue-100);
-            color: var(--blue-600);
-            border-color: var(--blue-300);
+            background-color: #bfdbfe;
+            color: #2563eb;
+            border-color: #60a5fa;
             font-size: 14px;
+        }
+
+        .wallee-numpad-max:hover {
+            background-color: #93c5fd;
         }
 
         .wallee-payment-status {
@@ -812,13 +820,35 @@ wallee_integration.inject_payment_styles = function() {
 
         /* Dark mode support */
         [data-theme="dark"] .wallee-amount-container {
-            background-color: var(--gray-800);
+            background-color: #1f2937;
         }
 
         [data-theme="dark"] .wallee-numpad-btn {
-            background-color: var(--gray-700);
-            border-color: var(--gray-600);
-            color: var(--gray-200);
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+
+        [data-theme="dark"] .wallee-numpad-btn:hover {
+            background-color: #4b5563;
+        }
+
+        [data-theme="dark"] .wallee-numpad-backspace {
+            background-color: #7f1d1d;
+            color: #fca5a5;
+            border-color: #991b1b;
+        }
+
+        [data-theme="dark"] .wallee-numpad-clear {
+            background-color: #78350f;
+            color: #fcd34d;
+            border-color: #92400e;
+        }
+
+        [data-theme="dark"] .wallee-numpad-max {
+            background-color: #1e3a8a;
+            color: #93c5fd;
+            border-color: #1e40af;
         }
     `).appendTo('head');
 };
