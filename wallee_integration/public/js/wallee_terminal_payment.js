@@ -547,11 +547,10 @@ wallee_integration.create_till_connection = async function(transactionName, dial
 
         // Subscribe to events
         tillConnection.subscribe('charged', function() {
-            console.log('Till: Transaction charged');
+            // Transaction completed
         });
 
         tillConnection.subscribe('canceled', function() {
-            console.log('Till: Transaction canceled via WebSocket');
             dialog.wallee_polling_active = false;
             dialog.wallee_canceled_by_websocket = true;
 
@@ -573,11 +572,11 @@ wallee_integration.create_till_connection = async function(transactionName, dial
         });
 
         tillConnection.subscribe('connected', function() {
-            console.log('Till: WebSocket connected');
+            // WebSocket connected
         });
 
         tillConnection.subscribe('disconnected', function() {
-            console.log('Till: WebSocket disconnected');
+            // WebSocket disconnected
         });
 
         // Connect
@@ -653,7 +652,6 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
                 .then(conn => {
                     if (conn) {
                         dialog.wallee_till_connection = conn;
-                        console.log('Till WebSocket connection established');
                     }
                 })
                 .catch(err => console.warn('Till connection not available:', err));
@@ -668,9 +666,7 @@ wallee_integration.process_terminal_payment = async function(dialog, terminal, a
                 // Try WebSocket cancel first (real-time terminal cancellation)
                 if (dialog.wallee_till_connection) {
                     try {
-                        console.log('Cancelling via Till WebSocket...');
                         dialog.wallee_till_connection.cancel();
-
                         // Give it a moment for the cancel to propagate
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     } catch (wsError) {
@@ -892,7 +888,6 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     // Try WebSocket cancel first (real-time terminal cancellation)
                     if (dialog.wallee_till_connection) {
                         try {
-                            console.log('Cancelling via Till WebSocket...');
                             dialog.wallee_till_connection.cancel();
                             await new Promise(resolve => setTimeout(resolve, 1000));
                         } catch (wsError) {
