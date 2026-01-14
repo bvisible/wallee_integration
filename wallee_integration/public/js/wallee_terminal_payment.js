@@ -498,7 +498,23 @@ wallee_integration.load_till_sdk = function() {
         const script = document.createElement('script');
         script.src = 'https://app-wallee.com/assets/payment/terminal-till-connection.js';
         script.type = 'text/javascript';
-        script.onload = () => resolve();
+
+        script.onload = () => {
+            // Wait for the class to be actually defined (script parsing may take a moment)
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max
+            const checkInterval = setInterval(() => {
+                attempts++;
+                if (window.TerminalTillConnection) {
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    reject(new Error('TerminalTillConnection not defined after script load'));
+                }
+            }, 100);
+        };
+
         script.onerror = () => reject(new Error('Failed to load Wallee Till SDK'));
         document.head.appendChild(script);
     });
