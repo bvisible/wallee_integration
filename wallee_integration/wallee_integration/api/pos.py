@@ -115,11 +115,20 @@ def process_terminal_async(terminal_id, transaction_id, transaction_name):
 	try:
 		initiate_terminal_transaction(terminal_id, transaction_id)
 	except Exception as e:
-		# Log error - the polling will pick up the actual status from Wallee
-		frappe.log_error(
-			title="Terminal Async Error",
-			message=f"Terminal: {terminal_id}, TX: {transaction_id}, Error: {str(e)}"
-		)
+		error_str = str(e).lower()
+		# Check if the transaction was canceled - this is expected when user clicks Cancel
+		if "canceled" in error_str or "cancelled" in error_str:
+			# Not an error - user intentionally canceled the payment
+			frappe.log_error(
+				title="Terminal Payment Canceled",
+				message=f"Terminal: {terminal_id}, TX: {transaction_id} - Payment was canceled by user"
+			)
+		else:
+			# Log actual error - the polling will pick up the actual status from Wallee
+			frappe.log_error(
+				title="Terminal Async Error",
+				message=f"Terminal: {terminal_id}, TX: {transaction_id}, Error: {str(e)}"
+			)
 
 
 @frappe.whitelist()
@@ -190,15 +199,42 @@ def cancel_terminal_payment(transaction_name):
 
 	doc = frappe.get_doc("Wallee Transaction", transaction_name)
 
-	if doc.status not in ["Pending", "Processing", "Authorized", "Confirmed"]:
+	# Allow cancelling if local status is cancellable OR if already voided (for idempotency)
+	if doc.status not in ["Pending", "Processing", "Authorized", "Confirmed", "Voided", "Failed"]:
 		frappe.throw(_("Only pending, processing or authorized transactions can be cancelled"))
+
+	# If already voided/failed locally, just return success
+	if doc.status in ["Voided", "Failed"]:
+		return {
+			"success": True,
+			"transaction_name": doc.name,
+			"status": doc.status,
+			"message": _("Payment was already cancelled")
+		}
 
 	# Get current state from Wallee
 	try:
 		wallee_tx = get_full_transaction(doc.transaction_id)
 		wallee_state = wallee_tx.state.value.upper() if wallee_tx.state else ""
-	except Exception:
+	except Exception as e:
+		# If we can't get the state, continue with local state
 		wallee_state = ""
+
+	# Transaction already canceled/failed on Wallee (e.g., via WebSocket cancel)
+	# Update local state and return success
+	if wallee_state in ["FAILED", "VOIDED", "DECLINE"]:
+		doc.status = "Voided" if wallee_state == "VOIDED" else "Failed"
+		doc.voided_on = frappe.utils.now_datetime()
+		doc.failure_reason = _("Cancelled by user")
+		doc.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		return {
+			"success": True,
+			"transaction_name": doc.name,
+			"status": doc.status,
+			"message": _("Payment cancelled successfully")
+		}
 
 	# For AUTHORIZED transactions, use void
 	if wallee_state == "AUTHORIZED" or doc.status == "Authorized":
@@ -216,6 +252,20 @@ def cancel_terminal_payment(transaction_name):
 				"message": _("Payment cancelled successfully")
 			}
 		except Exception as e:
+			error_str = str(e).lower()
+			# If void fails because transaction is already canceled, that's OK
+			if "canceled" in error_str or "cancelled" in error_str or "failed" in error_str:
+				doc.status = "Voided"
+				doc.voided_on = frappe.utils.now_datetime()
+				doc.failure_reason = _("Cancelled by user")
+				doc.save(ignore_permissions=True)
+				frappe.db.commit()
+				return {
+					"success": True,
+					"transaction_name": doc.name,
+					"status": "Voided",
+					"message": _("Payment cancelled successfully")
+				}
 			frappe.throw(_("Failed to cancel payment: {0}").format(str(e)))
 
 	# For PENDING/PROCESSING/CONFIRMED transactions (waiting on terminal),
@@ -237,7 +287,19 @@ def cancel_terminal_payment(transaction_name):
 		}
 
 	else:
-		frappe.throw(_("Transaction in state {0} cannot be cancelled").format(wallee_state or doc.status))
+		# Unknown state - try to mark as voided anyway
+		doc.status = "Voided"
+		doc.voided_on = frappe.utils.now_datetime()
+		doc.failure_reason = _("Cancelled by user (state: {0})").format(wallee_state or doc.status)
+		doc.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		return {
+			"success": True,
+			"transaction_name": doc.name,
+			"status": "Voided",
+			"message": _("Payment cancelled")
+		}
 
 
 @frappe.whitelist()

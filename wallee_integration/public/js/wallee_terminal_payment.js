@@ -774,7 +774,22 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                     currency: config.currency,
                     status: status
                 });
-            } else if (status === 'Failed' || status === 'Decline' || status === 'Voided') {
+            } else if (status === 'Voided') {
+                // Voided = cancelled by user - cleanup WebSocket connection
+                if (dialog.wallee_till_connection) {
+                    dialog.wallee_till_connection = null;
+                }
+
+                statusDiv.html(`
+                    <div class="alert alert-warning">
+                        <i class="fa fa-ban"></i>
+                        <strong>${__('Payment Cancelled')}</strong><br>
+                        ${__('The payment was cancelled.')}
+                    </div>
+                `);
+                dialog.enable_primary_action();
+                config.on_cancel();
+            } else if (status === 'Failed' || status === 'Decline') {
                 // Failed - cleanup WebSocket connection
                 if (dialog.wallee_till_connection) {
                     dialog.wallee_till_connection = null;
@@ -783,7 +798,7 @@ wallee_integration.poll_payment_status = async function(dialog, transactionName,
                 // Extract clean error message
                 const failureReason = result.message.failure_reason
                     ? wallee_integration.extract_error_message({ message: result.message.failure_reason })
-                    : __('The payment was declined or cancelled.');
+                    : __('The payment was declined.');
 
                 statusDiv.html(`
                     <div class="alert alert-danger">
