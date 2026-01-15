@@ -12,7 +12,7 @@ from wallee_integration.wallee_integration.api.client import (
 
 
 @frappe.whitelist()
-def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None, customer=None):
+def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None, customer=None, pos_profile=None):
 	"""
 	Initiate a terminal payment for POS
 
@@ -22,6 +22,7 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 		terminal: Terminal name (uses default if not specified)
 		pos_invoice: POS Invoice reference
 		customer: Customer ID
+		pos_profile: POS Profile name
 
 	Returns:
 		Transaction details and status
