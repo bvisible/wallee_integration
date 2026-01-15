@@ -80,7 +80,8 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 		currency=currency,
 		transaction_type="Terminal",
 		terminal=terminal_doc.name,
-		pos_invoice=pos_invoice,
+		reference_doctype="POS Invoice" if pos_invoice else None,
+		reference_name=pos_invoice,
 		customer=customer,
 		merchant_reference=merchant_reference
 	)

@@ -277,6 +277,45 @@ def update_transaction_from_wallee(doc, tx):
         "payment_connector_id": get_attr(get_attr(tx, "payment_connector_configuration"), "id") if get_attr(tx, "payment_connector_configuration") else None,
         "version": get_attr(tx, "version"),
     }
+
+    # Add token/card details if available
+    token = get_attr(tx, "token")
+    if token:
+        tokenized_pm = get_attr(token, "tokenized_payment_method")
+        if tokenized_pm:
+            raw_data["card"] = {
+                "brand": get_attr(tokenized_pm, "brand") or get_attr(tokenized_pm, "payment_method_brand"),
+                "last_digits": get_attr(tokenized_pm, "last_digits"),
+                "masked_number": get_attr(tokenized_pm, "masked_card_number"),
+                "holder_name": get_attr(tokenized_pm, "holder_name"),
+                "expiry_month": get_attr(tokenized_pm, "expiry_month"),
+                "expiry_year": get_attr(tokenized_pm, "expiry_year"),
+            }
+
+    # Add line items if available
+    line_items = get_attr(tx, "line_items")
+    if line_items:
+        raw_data["line_items"] = []
+        for item in line_items:
+            raw_data["line_items"].append({
+                "name": get_attr(item, "name"),
+                "unique_id": get_attr(item, "unique_id"),
+                "sku": get_attr(item, "sku"),
+                "quantity": get_attr(item, "quantity"),
+                "amount": get_attr(item, "amount_including_tax"),
+            })
+
+    # Add completion info if available
+    completions = get_attr(tx, "completions")
+    if completions:
+        raw_data["completions"] = []
+        for comp in completions:
+            raw_data["completions"].append({
+                "id": get_attr(comp, "id"),
+                "state": get_enum_value(get_attr(comp, "state")),
+                "amount": get_attr(comp, "amount"),
+            })
+
     doc.wallee_data = frappe.as_json(raw_data)
 
     doc.flags.ignore_validate = True
