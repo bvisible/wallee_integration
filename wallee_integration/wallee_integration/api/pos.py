@@ -74,6 +74,18 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 	transaction_id = transaction.get("transaction_id")
 	merchant_reference = pos_invoice or frappe.generate_hash()[:16]
 
+	# Determine reference document
+	# Priority: POS Invoice > POS Profile
+	if pos_invoice:
+		ref_doctype = "POS Invoice"
+		ref_name = pos_invoice
+	elif pos_profile:
+		ref_doctype = "POS Profile"
+		ref_name = pos_profile
+	else:
+		ref_doctype = None
+		ref_name = None
+
 	# Create local transaction record
 	local_transaction = create_transaction_record(
 		transaction_id=transaction_id,
@@ -81,8 +93,8 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 		currency=currency,
 		transaction_type="Terminal",
 		terminal=terminal_doc.name,
-		reference_doctype="POS Invoice" if pos_invoice else None,
-		reference_name=pos_invoice,
+		reference_doctype=ref_doctype,
+		reference_name=ref_name,
 		customer=customer,
 		merchant_reference=merchant_reference
 	)
