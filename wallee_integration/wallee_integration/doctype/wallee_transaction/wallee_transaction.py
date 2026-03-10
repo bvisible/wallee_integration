@@ -168,12 +168,20 @@ def update_transaction_from_wallee(doc, tx):
     # Update failure reason
     failure_reason = get_attr(tx, "failure_reason")
     if failure_reason:
-        if isinstance(failure_reason, dict):
-            doc.failure_reason = failure_reason.get("description") or str(failure_reason)
-        elif hasattr(failure_reason, "description"):
-            doc.failure_reason = failure_reason.description
-        else:
-            doc.failure_reason = str(failure_reason)
+        # FailureReason SDK object: .description returns a dict like {'en-US': '...'}
+        desc = None
+        if hasattr(failure_reason, "description"):
+            desc = failure_reason.description
+        elif isinstance(failure_reason, dict):
+            desc = failure_reason.get("description")
+
+        # Extract string from translation dict (e.g. {'en-US': 'message'})
+        if isinstance(desc, dict):
+            desc = next(iter(desc.values()), str(desc)) if desc else str(failure_reason)
+        elif desc is None:
+            desc = str(failure_reason)
+
+        doc.failure_reason = str(desc)[:500]
 
     # Update fees and settlement
     doc.wallee_fee = get_attr(tx, "total_applied_fees")
