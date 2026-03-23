@@ -37,7 +37,8 @@
   "webhook_secret",
   "log_api_calls",
   "column_break_advanced",
-  "test_mode"
+  "test_mode",
+  "send_invoice_to_customer"
  ],
  "fields": [
   {
@@ -246,6 +247,13 @@
    "fieldtype": "Check",
    "label": "Test Mode",
    "description": "Use sandbox/test environment"
+  },
+  {
+   "default": "0",
+   "fieldname": "send_invoice_to_customer",
+   "fieldtype": "Check",
+   "label": "Send Invoice to Customer",
+   "description": "When enabled, Wallee will send invoice PDFs to customers via email after transaction completion. Disabled by default."
   }
  ],
  "index_web_pages_for_search": 1,

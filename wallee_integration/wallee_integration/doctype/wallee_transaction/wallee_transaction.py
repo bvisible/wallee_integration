@@ -141,6 +141,9 @@ def update_transaction_from_wallee(doc, tx):
             return dt.replace(tzinfo=None)
         return dt
 
+    # Save old status to detect transitions
+    old_status = doc.status
+
     # Update status - access state attribute directly
     wallee_status = ""
     state = get_attr(tx, "state")
@@ -329,6 +332,15 @@ def update_transaction_from_wallee(doc, tx):
     doc.flags.ignore_validate = True
     doc.save(ignore_permissions=True)
     frappe.db.commit()
+
+    # After save: manage invoice if transaction just completed
+    if new_status in ["Completed", "Fulfill"] and old_status != new_status:
+        frappe.enqueue(
+            "wallee_integration.wallee_integration.api.invoice.manage_invoice_after_completion",
+            queue="short",
+            transaction_id=doc.transaction_id,
+            local_transaction_name=doc.name
+        )
 
 
 def _update_card_details(doc, tx):

@@ -31,7 +31,7 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
     Returns:
         dict: {transaction_id, payment_url, state}
     """
-    from wallee import TransactionsService, LineItemCreate, TransactionCreate, LineItemType, AddressCreate
+    from wallee import TransactionsService, LineItemCreate, TransactionCreate, LineItemType, AddressCreate, TaxCreate
 
     config = get_wallee_client()
     space_id = get_space_id()
@@ -55,13 +55,23 @@ def create_transaction(amount=None, line_items=None, currency=None, **kwargs):
             # Support both "amount_including_tax" and "amount" as field names
             item_amount = item.get("amount_including_tax") or item.get("amount", 0)
 
+            # Build tax objects if tax info is provided
+            wallee_taxes = None
+            item_taxes = item.get("taxes")
+            if item_taxes:
+                wallee_taxes = [
+                    TaxCreate(rate=float(t["rate"]), title=t["title"])
+                    for t in item_taxes
+                ]
+
             line_item = LineItemCreate(
                 name=item.get("name"),
                 quantity=float(item.get("quantity", 1)),
                 amount_including_tax=float(item_amount),
                 unique_id=item.get("unique_id") or item.get("sku") or str(frappe.generate_hash()[:8]),
                 type=item_type,
-                sku=item.get("sku")
+                sku=item.get("sku"),
+                taxes=wallee_taxes
             )
             wallee_line_items.append(line_item)
     elif amount:

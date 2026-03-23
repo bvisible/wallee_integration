@@ -308,12 +308,16 @@ def create_webshop_payment(cart_items, currency, success_url=None, failed_url=No
 
     for item in cart_items:
         amount = float(item.get("amount", 0))
-        line_items.append({
+        line_item = {
             "name": item.get("name", item.get("item_code", "Item")),
             "quantity": item.get("qty", 1),
             "amount": amount,
             "unique_id": item.get("item_code", frappe.generate_hash()[:8])
-        })
+        }
+        # Pass tax info if available in cart item
+        if item.get("taxes"):
+            line_item["taxes"] = item["taxes"]
+        line_items.append(line_item)
         total_amount += amount
 
     # Set URLs

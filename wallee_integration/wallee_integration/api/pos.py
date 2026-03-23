@@ -53,12 +53,25 @@ def initiate_terminal_payment(amount, currency, terminal=None, pos_invoice=None,
 	if terminal_doc.status != "Active":
 		frappe.throw(_("Terminal {0} is not active").format(terminal_doc.terminal_name))
 
+	# Extract tax information from reference document
+	from wallee_integration.wallee_integration.api.tax_utils import (
+		get_taxes_for_line_items,
+		get_taxes_from_pos_profile
+	)
+
+	taxes_list = []
+	if pos_invoice:
+		taxes_list = get_taxes_for_line_items("POS Invoice", pos_invoice)
+	elif pos_profile:
+		taxes_list = get_taxes_from_pos_profile(pos_profile)
+
 	# Create line item for the payment
 	line_items = [{
 		"name": f"POS Payment - {pos_invoice or 'Direct'}",
 		"quantity": 1,
 		"amount": float(amount),
-		"unique_id": frappe.generate_hash()[:8]
+		"unique_id": frappe.generate_hash()[:8],
+		"taxes": taxes_list or None
 	}]
 
 	# Create transaction in Wallee
