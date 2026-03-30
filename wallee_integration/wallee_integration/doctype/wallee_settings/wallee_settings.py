@@ -11,6 +11,9 @@ class WalleeSettings(Document):
 	def validate(self):
 		if self.enabled:
 			self.validate_credentials()
+		# Auto-detect mode of payment if not set
+		if self.enable_pos_terminal and not self.pos_mode_of_payment:
+			self.pos_mode_of_payment = self._find_card_mode_of_payment()
 
 	def validate_credentials(self):
 		"""Validate that all required credentials are provided"""
@@ -40,6 +43,22 @@ class WalleeSettings(Document):
 		except Exception as e:
 			frappe.throw(_("Connection failed: {0}").format(str(e)))
 			return False
+
+
+	@staticmethod
+	def _find_card_mode_of_payment():
+		"""Auto-detect a credit card Mode of Payment by name pattern."""
+		# Search for common card/credit payment names in any language
+		patterns = ["%credit%", "%carte%", "%card%", "%karte%", "%credito%"]
+		for pattern in patterns:
+			match = frappe.db.get_value(
+				"Mode of Payment",
+				{"name": ("like", pattern), "type": "Bank"},
+				"name",
+			)
+			if match:
+				return match
+		return None
 
 
 def get_wallee_settings():
